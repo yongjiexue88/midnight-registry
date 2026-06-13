@@ -10,3 +10,4 @@ dist/
 output/
 .DS_Store
 tsconfig.tsbuildinfo
+.vercel

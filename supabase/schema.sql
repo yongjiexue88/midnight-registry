@@ -59,6 +59,8 @@ create table if not exists public.task_templates (
   created_at timestamptz not null default now()
 );
 
+create index if not exists task_templates_location_id_idx on public.task_templates(location_id);
+
 create table if not exists public.inventory_items (
   id text primary key,
   name text not null,
@@ -89,6 +91,7 @@ create table if not exists public.user_pets (
 );
 
 create index if not exists user_pets_user_id_idx on public.user_pets(user_id);
+create index if not exists user_pets_pet_template_id_idx on public.user_pets(pet_template_id);
 
 create table if not exists public.task_runs (
   id uuid primary key default gen_random_uuid(),
@@ -105,6 +108,8 @@ create table if not exists public.task_runs (
 );
 
 create index if not exists task_runs_user_created_idx on public.task_runs(user_id, completed_at desc);
+create index if not exists task_runs_user_pet_id_idx on public.task_runs(user_pet_id);
+create index if not exists task_runs_task_template_id_idx on public.task_runs(task_template_id);
 
 create table if not exists public.user_inventory (
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -114,6 +119,8 @@ create table if not exists public.user_inventory (
   primary key (user_id, item_id)
 );
 
+create index if not exists user_inventory_item_id_idx on public.user_inventory(item_id);
+
 create table if not exists public.reward_claims (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -122,6 +129,8 @@ create table if not exists public.reward_claims (
   rewards jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
+
+create index if not exists reward_claims_user_id_idx on public.reward_claims(user_id);
 
 create table if not exists public.friendships (
   requester_id uuid not null references auth.users(id) on delete cascade,
@@ -133,6 +142,8 @@ create table if not exists public.friendships (
   constraint friendships_no_self check (requester_id <> addressee_id)
 );
 
+create index if not exists friendships_addressee_id_idx on public.friendships(addressee_id);
+
 create table if not exists public.friend_pet_visits (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -143,9 +154,14 @@ create table if not exists public.friend_pet_visits (
   created_at timestamptz not null default now()
 );
 
+create index if not exists friend_pet_visits_owner_id_idx on public.friend_pet_visits(owner_id);
+create index if not exists friend_pet_visits_visitor_id_idx on public.friend_pet_visits(visitor_id);
+create index if not exists friend_pet_visits_user_pet_id_idx on public.friend_pet_visits(user_pet_id);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
@@ -203,31 +219,31 @@ create policy "Catalog locations are readable" on public.locations for select us
 create policy "Catalog task templates are readable" on public.task_templates for select using (true);
 create policy "Catalog inventory items are readable" on public.inventory_items for select using (true);
 
-create policy "Profiles are visible to owner" on public.profiles for select using (auth.uid() = id);
-create policy "Profiles are insertable by owner" on public.profiles for insert with check (auth.uid() = id);
-create policy "Profiles are editable by owner" on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
+create policy "Profiles are visible to owner" on public.profiles for select using ((select auth.uid()) = id);
+create policy "Profiles are insertable by owner" on public.profiles for insert with check ((select auth.uid()) = id);
+create policy "Profiles are editable by owner" on public.profiles for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
-create policy "User pets are visible to owner" on public.user_pets for select using (auth.uid() = user_id);
-create policy "User pets are insertable by owner" on public.user_pets for insert with check (auth.uid() = user_id);
-create policy "User pets are editable by owner" on public.user_pets for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "User pets are deletable by owner" on public.user_pets for delete using (auth.uid() = user_id);
+create policy "User pets are visible to owner" on public.user_pets for select using ((select auth.uid()) = user_id);
+create policy "User pets are insertable by owner" on public.user_pets for insert with check ((select auth.uid()) = user_id);
+create policy "User pets are editable by owner" on public.user_pets for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "User pets are deletable by owner" on public.user_pets for delete using ((select auth.uid()) = user_id);
 
-create policy "Task runs are visible to owner" on public.task_runs for select using (auth.uid() = user_id);
-create policy "Task runs are insertable by owner" on public.task_runs for insert with check (auth.uid() = user_id);
+create policy "Task runs are visible to owner" on public.task_runs for select using ((select auth.uid()) = user_id);
+create policy "Task runs are insertable by owner" on public.task_runs for insert with check ((select auth.uid()) = user_id);
 
-create policy "Inventory is visible to owner" on public.user_inventory for select using (auth.uid() = user_id);
-create policy "Inventory is insertable by owner" on public.user_inventory for insert with check (auth.uid() = user_id);
-create policy "Inventory is editable by owner" on public.user_inventory for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Inventory is visible to owner" on public.user_inventory for select using ((select auth.uid()) = user_id);
+create policy "Inventory is insertable by owner" on public.user_inventory for insert with check ((select auth.uid()) = user_id);
+create policy "Inventory is editable by owner" on public.user_inventory for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
-create policy "Reward claims are visible to owner" on public.reward_claims for select using (auth.uid() = user_id);
-create policy "Reward claims are insertable by owner" on public.reward_claims for insert with check (auth.uid() = user_id);
+create policy "Reward claims are visible to owner" on public.reward_claims for select using ((select auth.uid()) = user_id);
+create policy "Reward claims are insertable by owner" on public.reward_claims for insert with check ((select auth.uid()) = user_id);
 
-create policy "Friendships are visible to related users" on public.friendships for select using (auth.uid() in (requester_id, addressee_id));
-create policy "Friendships are requestable by requester" on public.friendships for insert with check (auth.uid() = requester_id);
-create policy "Friendships are editable by related users" on public.friendships for update using (auth.uid() in (requester_id, addressee_id)) with check (auth.uid() in (requester_id, addressee_id));
+create policy "Friendships are visible to related users" on public.friendships for select using ((select auth.uid()) in (requester_id, addressee_id));
+create policy "Friendships are requestable by requester" on public.friendships for insert with check ((select auth.uid()) = requester_id);
+create policy "Friendships are editable by related users" on public.friendships for update using ((select auth.uid()) in (requester_id, addressee_id)) with check ((select auth.uid()) in (requester_id, addressee_id));
 
-create policy "Friend visits are visible to related users" on public.friend_pet_visits for select using (auth.uid() in (owner_id, visitor_id));
-create policy "Friend visits are insertable by visitor" on public.friend_pet_visits for insert with check (auth.uid() = visitor_id);
+create policy "Friend visits are visible to related users" on public.friend_pet_visits for select using ((select auth.uid()) in (owner_id, visitor_id));
+create policy "Friend visits are insertable by visitor" on public.friend_pet_visits for insert with check ((select auth.uid()) = visitor_id);
 
 grant usage on schema public to anon, authenticated;
 grant select on public.pet_templates, public.locations, public.task_templates, public.inventory_items to anon, authenticated;
