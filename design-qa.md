@@ -18,7 +18,8 @@
 **Review Results**
 - Asset sheets cover characters, objects/tools, UI components, and full nightly structure.
 - The first UI flow sheet visually skipped Night 6, so a corrected seven-night progression sheet was generated and marked as canonical.
-- Individual character cards were re-cropped using measured card borders from the actual 1448 x 1086 generated sheet, not an assumed 2048-grid. The previous crop issue that included adjacent card edges was corrected.
+- Character assets were regenerated as individual clean portrait files rather than cropped from the labeled roster sheet. Each character now uses a uniform `512 x 768` canvas with no top numbers, status dots, card border, name label, or filename strip.
+- The old roster-sheet crop approach was abandoned because the generated display board did not keep every figure at a uniform position or scale.
 - 39 individual prop/tool/clue crops were exported from the props sheet and added to the design system. Problem crops such as the glove, scarf, cane, red string, paper clips, floor rules, and final-column character cards were manually corrected after contact-sheet review.
 - `/design-system` DOM audit passed: 4 sheet cards, 16 character cards, 5 prop/tool groups, 12 error-detail cards, 7 night cards, and 4 ending cards.
 - Runtime/file image audit found 59 PNG assets and no empty or black-image candidates.
