@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { GameRuntimeHooks } from "@/components/game/GameRuntimeHooks";
 import { RewardModal } from "@/components/game/RewardModal";
 import { Toast } from "@/components/ui/Toast";
 import { BottomNav } from "./BottomNav";
@@ -17,6 +18,7 @@ export function AppShell({ children, compact = false }: AppShellProps) {
       <BottomNav />
       <RewardModal />
       <Toast />
+      <GameRuntimeHooks />
     </main>
   );
 }
