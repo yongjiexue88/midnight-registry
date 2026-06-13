@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/layout/AppShell";
-import { TownExperience } from "@/components/game/TownExperience";
+import { redirect } from "next/navigation";
 
 export default function TownPage() {
-  return (
-    <AppShell>
-      <TownExperience />
-    </AppShell>
-  );
+  redirect("/");
 }

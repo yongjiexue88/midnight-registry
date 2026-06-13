@@ -1,37 +1,35 @@
 **Source Visual Truth**
-- Path: `/Users/yongjiexue/Documents/GitHub/yongjiexue88.github.io/prototypes/pocket-town-companions/public/assets/reference-pocket-town-companions.png`
+- User-provided inspection-game screenshots from June 13, 2026.
+- Product direction: original seven-night door-clerk identity verification horror game, not Pet Town.
 
-**Implementation Evidence**
-- Local URL: `http://127.0.0.1:5174/`
-- Main screenshot: `/Users/yongjiexue/Documents/GitHub/yongjiexue88.github.io/prototypes/pocket-town-companions/output/qa/home-1440-final.png`
-- Interaction screenshot: `/Users/yongjiexue/Documents/GitHub/yongjiexue88.github.io/prototypes/pocket-town-companions/output/qa/interactions-1440-final.png`
-- Mobile screenshot: `/Users/yongjiexue/Documents/GitHub/yongjiexue88.github.io/prototypes/pocket-town-companions/output/qa/mobile-390-final.png`
-- Full-view comparison evidence: `/Users/yongjiexue/Documents/GitHub/yongjiexue88.github.io/prototypes/pocket-town-companions/output/qa/reference-vs-implementation-final.png`
-- Viewport: desktop `1440 x 1024`, mobile `390 x 844`.
-- State: default town screen, plus map/task interaction state.
+**Generated Asset Inventory**
+- Character roster sheet: `/Users/yongjiexue/Documents/pet_town/public/assets/midnight-registry/character-roster-sheet.png`
+- Props and tools sheet: `/Users/yongjiexue/Documents/pet_town/public/assets/midnight-registry/props-and-tools-sheet.png`
+- UI flow components sheet: `/Users/yongjiexue/Documents/pet_town/public/assets/midnight-registry/ui-flow-components-sheet.png`
+- Corrected seven-night progression sheet: `/Users/yongjiexue/Documents/pet_town/public/assets/midnight-registry/night-progression-encounters-sheet.png`
+- Individual character card crops: `/Users/yongjiexue/Documents/pet_town/public/assets/midnight-registry/characters/*.png`
 
-**Findings**
-- No P0/P1/P2 issues found after the final pass.
+**Reusable Data And Storybook**
+- Data source: `/Users/yongjiexue/Documents/pet_town/data/midnightRegistryDesignSystem.ts`
+- Design system component: `/Users/yongjiexue/Documents/pet_town/components/midnight/MidnightRegistryDesignSystem.tsx`
+- Next preview route: `http://127.0.0.1:3000/design-system`
+- Storybook story: `/Users/yongjiexue/Documents/pet_town/stories/MidnightRegistryDesignSystem.stories.tsx`
 
-**Required Fidelity Surfaces**
-- Fonts and typography: implementation uses a rounded game UI type stack with strong weights and compact labels. Text is readable in desktop and mobile screenshots; no button or card label overflow was observed.
-- Spacing and layout rhythm: final desktop layout preserves the reference structure: top HUD, left care rail, center town scene, right task/event rail, companion carousel, action buttons, and reusable component shelf. The implementation favors a slightly taller gameplay area than the reference.
-- Colors and visual tokens: palette matches the selected direction with peach, cyan, lime, gold, pink, white, and dark ink. Semantic colors are consistent across care meters, task rows, reward modal, stat chips, and inventory slots.
-- Image quality and asset fidelity: main town scene and pet portraits are generated raster assets in the same modern cute web-game style. Icons use Font Awesome rather than handcrafted SVG or CSS art.
-- Copy and content: game-specific copy covers pet identity, needs, charm/strength/intelligence stats, task progress, rewards, inventory, achievement, mini map, and design system labels.
-
-**Patches Made Since Previous QA Pass**
-- Moved the pet status bubble away from lower hotspot buttons.
-- Tightened desktop layout and companion/action sizing.
-- Added a Pocket Town mini map component to match the selected direction more closely.
-
-**Follow-up Polish**
-- P3: If the next iteration is design-system-first, reduce the gameplay canvas height or add a dedicated Design Kit route so the full component shelf appears above the fold on desktop.
-- P3: Generate dedicated task thumbnail art for Daily Care, Part-Time Helper, and Style Star if higher visual fidelity to the original mock is needed.
+**Review Results**
+- Asset sheets cover characters, objects/tools, UI components, and full nightly structure.
+- The first UI flow sheet visually skipped Night 6, so a corrected seven-night progression sheet was generated and marked as canonical.
+- Individual character cards were re-cropped using measured card borders from the actual 1448 x 1086 generated sheet, not an assumed 2048-grid. The previous crop issue that included adjacent card edges was corrected.
+- 39 individual prop/tool/clue crops were exported from the props sheet and added to the design system. Problem crops such as the glove, scarf, cane, red string, paper clips, floor rules, and final-column character cards were manually corrected after contact-sheet review.
+- `/design-system` DOM audit passed: 4 sheet cards, 16 character cards, 5 prop/tool groups, 12 error-detail cards, 7 night cards, and 4 ending cards.
+- Runtime/file image audit found 59 PNG assets and no empty or black-image candidates.
+- Game UI audit passed: first visitor portrait loads from `/assets/midnight-registry/characters/lin-anna-dance-teacher.png`, and the four decision buttons are present.
+- Game UI now also uses cropped prop assets for call room, ID scanner, CCTV, question, approve, deny, security call, and wait controls.
 
 **Implementation Checklist**
-- Build passed with `npm run build`.
-- Game verification script ran and produced screenshots/state JSON in `output/web-game`.
-- Desktop, modal, interaction, and mobile screenshots were captured with Playwright.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run build-storybook`: passed, with only Storybook bundle-size warnings.
+- In-app browser opened `http://127.0.0.1:3000/design-system`.
+- In-app browser opened `http://127.0.0.1:3000/` and verified the integrated character image plus decision modal.
 
 final result: passed

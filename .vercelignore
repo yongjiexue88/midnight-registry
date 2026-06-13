@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+dist
+storybook-static
+output
+.npm-cache
+tsconfig.tsbuildinfo
+*.log

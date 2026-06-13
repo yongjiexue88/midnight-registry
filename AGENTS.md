@@ -8,8 +8,11 @@ When implementing from a selected generated mock, treat that image as the source
 
 ## Durable Prototype Decisions
 
-- Pocket Town Companions should be treated as a reusable game UI design system first, not a one-off screen.
-- Canonical Figma page structure: `00 - Design Tokens`, `01 - Brand & Logo`, `02 - Core Components`, `03 - Game HUD`, `04 - Pet Assets`, `05 - Town Locations`, `06 - Task System`, `07 - Inventory & Shop`, `08 - Reward Modals`, `09 - Screens`, `10 - Prototype Flow`, `11 - Export Assets`.
-- Core visual language: rounded, cute, modern web game UI with soft cream surfaces, chunky bordered cards, bottom button shadows, candy accent colors, and friendly rounded typography.
-- Design tokens should map to the CSS custom properties requested for Pocket Town Companions, including primary `#6CA8FF`, secondary `#FF9DB5`, accent `#FFD86B`, background `#FFF8E8`, main text `#3A2E2A`, and border `#4A352E`.
-- Asset naming should be code-ready and kebab-case, for example `pet-biscuit-corgi-avatar.png`, `location-town-plaza-card.png`, `icon-stat-charm.svg`, and `reward-stars-burst.png`.
+- Pocket Town Companions is archived and should not guide future design work unless the user explicitly revives it.
+- Current active prototype direction is Midnight Registry: a seven-night door-clerk identity verification horror game with reusable character, prop, UI, rule, error-detail, and nightly encounter assets.
+- Midnight Registry decisions must support four outcomes during each visitor check: allow entry, refuse entry, call security, and hold/wait.
+- Storybook/design-system assets should be reusable in the game UI, not just static reference images.
+- Midnight Registry / 午夜登记簿 is the primary playable prototype and should replace visible Pet Town routes and pet-care gameplay.
+- Midnight Registry should feel like an original old-apartment night desk horror interface: dark lobby, registry paperwork, resident archive comparison, nightly rules, verification tools, sanity pressure, and direct allow/refuse decisions.
+- The MVP should remain a 3-night playable demo with authored visitor cases, 10 resident records, 8 visitors per night, and evidence-based fake detection through names, rooms, IDs, appearance, habits, appointments, phone calls, and rules.
+- Midnight Registry gameplay should emphasize a manual door-clerk verification loop: inspect visitor documents, compare archive/notice details, call rooms or contacts, ask questions, mark an approval form, then stamp allow/refuse/security/hold.
