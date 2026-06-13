@@ -35,6 +35,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
+For GitHub Actions deployment, set the same Supabase values plus `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as GitHub repository secrets.
+
 Run `supabase/schema.sql`, then `supabase/seed.sql`.
 
 ## Vercel
