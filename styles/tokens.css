@@ -1,0 +1,23 @@
+:root {
+  color-scheme: light;
+  --font-game: "Nunito", "Inter", "Segoe UI", system-ui, sans-serif;
+  --color-ink: #243041;
+  --color-muted: #768090;
+  --color-bg: #fbf2e4;
+  --color-bg-strong: #fff8ec;
+  --color-surface: rgba(255, 252, 245, 0.93);
+  --color-surface-solid: #fffaf0;
+  --color-line: rgba(91, 74, 51, 0.16);
+  --color-peach: #ff8f61;
+  --color-cyan: #22c9d6;
+  --color-lime: #8bd44f;
+  --color-gold: #ffcf4f;
+  --color-pink: #ff5e94;
+  --color-red: #ff634d;
+  --color-blue: #4ba6ff;
+  --color-green: #49c461;
+  --shadow-soft: 0 12px 30px rgba(70, 50, 24, 0.13);
+  --shadow-strong: 0 18px 50px rgba(83, 61, 36, 0.18);
+  --radius-card: 8px;
+  --radius-control: 14px;
+}

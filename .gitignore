@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+.npmrc
+.next/
+out/
+dist/
+.env
+.env*.local
+.vercel/
+output/
+.DS_Store
+tsconfig.tsbuildinfo
