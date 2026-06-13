@@ -5,7 +5,7 @@ The reusable visual system is exposed in `/design-system`.
 ## Source Assets
 
 - Character roster: `public/assets/midnight-registry/characters/`
-- Props and tools: `public/assets/midnight-registry/props/`
+- Props and tools: `public/assets/midnight-registry/props/` (`512 x 512` normalized PNG assets)
 - Sheet references: `public/assets/midnight-registry/*-sheet.png`
 - Data contract: `data/midnightRegistryDesignSystem.ts`
 

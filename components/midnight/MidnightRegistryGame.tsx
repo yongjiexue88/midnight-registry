@@ -99,23 +99,23 @@ type QuestionOption = {
 };
 
 const checklistItems: { key: ChecklistKey; label: string }[] = [
-  { key: "documents", label: "Documents checked" },
-  { key: "archive", label: "Archive matched" },
-  { key: "phone", label: "Phone or tool confirmed" },
+  { key: "documents", label: "Paper identity checked" },
+  { key: "archive", label: "Archive reality matched" },
+  { key: "phone", label: "Social identity confirmed" },
   { key: "appearance", label: "Appearance compared" },
   { key: "rules", label: "Night rules reviewed" },
   { key: "ledger", label: "Entry log checked" },
 ];
 
 const evidenceOptions: EvidenceOption[] = [
-  { key: "id", label: "ID / name mismatch", detail: "Printed identity, badge, checksum, or room number does not line up." },
+  { key: "id", label: "Paper identity mismatch", detail: "Printed identity, badge, checksum, or room number does not line up." },
   { key: "appearance", label: "Appearance mismatch", detail: "Face, feature side, carried item, clothing, or camera view contradicts the archive." },
   { key: "schedule", label: "Schedule conflict", detail: "Arrival, curfew, shift, or already-inside timing is impossible." },
-  { key: "phone", label: "Phone conflict", detail: "Room, employer, management, or neighbor call contradicts the claim." },
-  { key: "behavior", label: "Behavior anomaly", detail: "Habit answer, greeting, speech pattern, or emotional reaction is wrong." },
+  { key: "phone", label: "Social identity conflict", detail: "Room, employer, management, or neighbor call contradicts the claim." },
+  { key: "behavior", label: "Unrecorded memory failure", detail: "Habit answer, greeting, speech pattern, or private routine is wrong." },
   { key: "rules", label: "Rule violation", detail: "Tonight's notice blocks this entrant or requires escalation." },
   { key: "appointment", label: "Appointment mismatch", detail: "Visitor, courier, maintenance, company, time, room, or work order is wrong." },
-  { key: "ledger", label: "Entry log conflict", detail: "Today's in/out record conflicts with the person at the glass." },
+  { key: "ledger", label: "Reality ledger conflict", detail: "Today's in/out record conflicts with the person at the glass." },
 ];
 
 const emptyToolCounts: Record<ToolName, number> = {
@@ -526,7 +526,7 @@ const visitors: Visitor[] = [
     isMirror: false,
     threat: 6,
     clues: ["Appointment name, company, time, and location match.", "Fourth-floor task is allowed."],
-    phone: "The superintendent line confirms Blue Star Repair at 20:30.",
+    phone: "The superintendent line confirms Blue Star Repair at 20:30, then coughs through a burst of old rain static.",
     scanner: "Contractor pass BSR-443 matches the register.",
     camera: "Toolbox seal matches the notice photo.",
     question: "He says there is no seventh floor in the work order.",
@@ -552,9 +552,9 @@ const visitors: Visitor[] = [
     expectedAction: "reject",
     isMirror: true,
     threat: 21,
-    clues: ["Company name is wrong.", "Arrival time is wrong.", "There is no seventh floor."],
-    phone: "The superintendent line is dead; a wet tapping answers from the receiver.",
-    scanner: "Pass number exists, but the company imprint says Blue Heart Repair.",
+    clues: ["Company name is wrong.", "Arrival time is wrong.", "There is no seventh floor.", "Blue Star Repair closed twelve years ago, but tonight's list keeps printing its work orders."],
+    phone: "The superintendent line is dead; a wet tapping answers from the receiver and spells Blue Star in pulses.",
+    scanner: "Pass number exists, but the company imprint says Blue Heart Repair and the issuer date is twelve years old.",
     camera: "The toolbox opens to black cloth instead of tools.",
     question: "He repeats 'seventh floor' after every question.",
     portrait: "red",
@@ -917,22 +917,22 @@ const visitors: Visitor[] = [
     job: "Night Door Clerk",
     idCode: "0000-00",
     arrival: "23:59",
-    reason: "Shift change. Says you can go home now.",
+    reason: "Shift change. Says your temporary contract has reached replacement.",
     eyes: "Unreadable in the glass",
     hair: "Same silhouette as the current clerk",
-    feature: "Wears your spare badge",
+    feature: "Wears your spare badge and carries a signed relief order",
     clothing: "Old Moonshadow uniform, dry in the rain",
-    voice: "Your voice, one second late",
-    behavior: "Knows every question you asked tonight",
-    badge: "Badge issued seven years ago",
+    voice: "Your voice, only warmer",
+    behavior: "Says, 'Your shift is over. I am already registered.'",
+    badge: "Badge 000 / authorization: Moonshadow Management",
     expectedAction: "security",
     isMirror: true,
     threat: 30,
-    clues: ["Room 000 is not in the archive.", "No shift change exists in the register.", "The badge was issued before your first night.", "The desk phone calls itself."],
-    phone: "The desk phone calls itself. The receiver says, 'You are already on the list.'",
-    scanner: "Badge 0000-00 opens a corrupted file with your photo facing away.",
-    camera: "The camera shows your chair empty, even while you are sitting in it.",
-    question: "It answers with your most-used question before you ask.",
+    clues: ["Tonight's rules list no shift change.", "Management does not answer.", "CCTV shows no shadow outside.", "The entry log already lists Y. Xue as on duty.", "The back of your badge says: Do not register a second self."],
+    phone: "The desk phone calls itself. A clipped voice says, 'You are not the first clerk. Do not open for the one who asks to replace you.'",
+    scanner: "Badge 0000-00 opens a real file: Y. Xue, Temporary Night Clerk, status waiting for replacement.",
+    camera: "CCTV confirms the relief clerk has no shadow, while the chair camera still shows you at the desk.",
+    question: "It answers every recorded fact correctly, but cannot name the sentence handwritten on the back of your badge.",
     portrait: "gray",
   },
 ];
@@ -1005,18 +1005,21 @@ const entryLogsByDay: Record<number, EntryLog[]> = {
     { time: "20:36", subject: "Zhou Qiming 506", state: "Returned", detail: "Card-game return expected before curfew.", tone: "clear" },
     { time: "21:00", subject: "Mina Park 208", state: "Out", detail: "Studio class listed until 21:30.", tone: "clear" },
     { time: "22:04", subject: "Owen Xu 502", state: "Inside", detail: "Case registered upstairs; no visitor pickup logged.", tone: "warning" },
+    { time: "23:12", subject: "Registry margin", state: "Ink shift", detail: "One old tenant line changes shape when a refusal stamp dries.", tone: "warning" },
   ],
   2: [
-    { time: "20:30", subject: "Blue Star Repair", state: "Scheduled", detail: "One contractor approved for the fourth-floor electrical box.", tone: "clear" },
+    { time: "20:30", subject: "Blue Star Repair", state: "Scheduled", detail: "One contractor approved for the fourth-floor electrical box. Company status is not verified.", tone: "clear" },
     { time: "21:10", subject: "Moon Courier", state: "Scheduled", detail: "Medicine parcel for 302 may be held at the desk after curfew.", tone: "clear" },
     { time: "21:40", subject: "6F maintenance", state: "Suspended", detail: "No ventilation, wiring, or pipe work may enter sixth floor.", tone: "danger" },
     { time: "22:18", subject: "Zhao Jun 104", state: "Out", detail: "Office audit delay confirmed by management phone note.", tone: "clear" },
+    { time: "23:31", subject: "Blue Star archive", state: "Closed", detail: "Old business registry says Blue Star Repair dissolved twelve years ago.", tone: "warning" },
   ],
   3: [
     { time: "19:20", subject: "Chen Rui 410", state: "Away", detail: "Hospital night duty; early return requires employer confirmation.", tone: "warning" },
     { time: "22:52", subject: "Mina Park 208", state: "Inside", detail: "Resident already upstairs; second arrival is a conflict.", tone: "danger" },
     { time: "23:20", subject: "Wang Yulan 601", state: "Inside", detail: "Old key logged; no seventh-floor destination exists.", tone: "danger" },
-    { time: "23:58", subject: "Desk shift", state: "No relief", detail: "No clerk handoff, badge 000, or room 000 appears in the registry.", tone: "danger" },
+    { time: "23:58", subject: "Desk shift", state: "No relief", detail: "No clerk handoff appears in tonight's rules.", tone: "danger" },
+    { time: "23:59", subject: "Y. Xue", state: "On duty", detail: "Current clerk is already recorded at the desk. A second entry would overwrite the first.", tone: "danger" },
   ],
 };
 
@@ -1029,8 +1032,8 @@ const entrySignalByVisitorId: Record<string, string> = {
   "d1-mina-fake": "The badge room 280 does not exist in tonight's ledger.",
   "d1-guo-real": "Guo Lan had a late client fitting and is not yet marked inside.",
   "d1-owen-fake": "Owen's case is logged inside 502; a pickup claim conflicts with the ledger.",
-  "d2-han-real": "Blue Star Repair has one valid 20:30 work order for 4F.",
-  "d2-han-fake": "No 23:30 work order exists, and no seventh-floor route exists.",
+  "d2-han-real": "Blue Star Repair has one valid 20:30 work order for 4F, but the company file is old enough to feel wrong.",
+  "d2-han-fake": "No 23:30 work order exists, no seventh-floor route exists, and the Blue Star name should not still be active.",
   "d2-li-real": "Li Mei has no elevator use logged and may return by stairs.",
   "d2-li-fake": "Li Mei already came up by stairs; elevator behavior conflicts with the log.",
   "d2-courier": "The medicine parcel is scheduled, but the courier should be held at the desk after curfew.",
@@ -1044,7 +1047,7 @@ const entrySignalByVisitorId: Record<string, string> = {
   "d3-wang-fake": "No room 701 or seventh-floor reading room exists in any log.",
   "d3-guo-fake": "Guo Lan's workshop line reports she is inside with narrow sleeves.",
   "d3-owen-visitor": "Noah Xu has no visit entry, and Owen's case is already visible upstairs.",
-  "d3-final-guard": "No relief clerk, room 000, or old badge handoff exists tonight.",
+  "d3-final-guard": "The ledger already contains Y. Xue on duty; a second clerk entry would make one version official and erase the other.",
 };
 
 function getResident(id?: string) {
@@ -1089,8 +1092,8 @@ function getPhoneLines(visitor: Visitor): PhoneLine[] {
     lines.push({
       label: "Management office",
       result: visitor.expectedAction === "allow"
-        ? "Management confirms one Blue Star contractor for the fourth-floor electrical box."
-        : "Management has no matching work order and tells you to keep the lobby locked.",
+        ? "Management confirms one Blue Star contractor for the fourth-floor electrical box, then denies knowing when the company closed."
+        : "Management has no matching work order, then repeats your question in a voice that is not the superintendent.",
     });
   } else if (visitorType === "courier") {
     lines.push({
@@ -1109,7 +1112,7 @@ function getPhoneLines(visitor: Visitor): PhoneLine[] {
   } else if (visitorType === "clerk") {
     lines.push({
       label: "Security booth",
-      result: "Security says no relief clerk was assigned and asks you to keep the caller on camera.",
+      result: "If Zhou Qiming is still in the building, security relays his warning: if the person at the door looks like you, do not open.",
     });
   } else {
     lines.push({
@@ -1136,7 +1139,7 @@ function getQuestionOptions(visitor: Visitor, resident?: Resident): QuestionOpti
       answer: `${visitor.name} claims ${visitor.room} with badge ${visitor.idCode}.`,
       signal: visitor.expectedAction === "allow" || visitor.expectedAction === "wait"
         ? "The claim can still be valid, but documents must match the archive or appointment list."
-        : "The claim sounds rehearsed; compare it against the file before deciding.",
+        : "The claim may be copied from paper; compare it against people, habits, and tonight's ledger.",
     },
     {
       category: "relation",
@@ -1146,7 +1149,7 @@ function getQuestionOptions(visitor: Visitor, resident?: Resident): QuestionOpti
         : visitor.appointment
           ? `${visitor.question} Appointment target: ${visitor.appointment.room}, ${visitor.appointment.task}.`
           : visitor.question,
-      signal: visitor.isMirror ? "The answer exposes a habit or relationship mismatch." : "The answer gives a usable cross-check.",
+      signal: visitor.isMirror ? "The answer exposes a habit, relationship, or unrecorded-memory mismatch." : "The answer gives a usable cross-check.",
     },
     {
       category: "situation",
@@ -1168,7 +1171,7 @@ function getQuestionOptions(visitor: Visitor, resident?: Resident): QuestionOpti
               : "Name the registry rule that lets you in.",
       answer: visitor.question,
       signal: visitor.isMirror
-        ? "The pause is too long, then the answer arrives too smoothly."
+        ? "The pause is too long, then the answer arrives too smoothly for something never written down."
         : "The answer stays consistent with at least one source.",
     },
   ];
@@ -1177,22 +1180,22 @@ function getQuestionOptions(visitor: Visitor, resident?: Resident): QuestionOpti
 function getConsequences(visitor: Visitor, decision: Decision, correct: boolean, markedEvidenceCount: number) {
   if (correct) {
     if (decision === "allow") {
-      return ["The door light turns green and the ledger stays clean.", "Safety holds because the evidence chain supports entry."];
+      return ["The door light turns green and the ledger accepts one existing life without rewriting it.", "Safety holds because paper, social proof, and lived detail support entry."];
     }
 
     if (decision === "wait") {
-      return ["The visitor remains outside while another source is pending.", "Reputation holds because the case was uncertain, not hostile."];
+      return ["The visitor remains outside while the record keeps searching for a second source.", "Hold buys time for callbacks, CCTV updates, and file movement without making anyone official yet."];
     }
 
     if (decision === "security") {
-      return ["The shutter drops and security seals the lobby.", "The anomaly is logged before it reaches the stairwell."];
+      return ["The shutter drops and security seals the lobby before the record can claim a body.", "The anomaly is logged as hostile instead of being written into residence."];
     }
 
-    return ["The window darkens and the visitor leaves the glass.", "The refusal is backed by the marked contradictions."];
+    return ["The window darkens and the visitor leaves the glass before the ledger can legalize the claim.", "The refusal is backed by contradictions across the evidence chain."];
   }
 
   if (decision === "allow" && visitor.isMirror) {
-    return ["A false entrant reaches the stairs.", "Tomorrow's archive will lose a clean detail, and stability drops."];
+    return ["A false entrant reaches the stairs and gains an official line in the registry.", "Tomorrow's archive will erase one clean detail from the original resident."];
   }
 
   if (decision === "security" && !visitor.isMirror) {
@@ -1204,7 +1207,7 @@ function getConsequences(visitor: Visitor, decision: Decision, correct: boolean,
   }
 
   if (visitor.expectedAction === "wait") {
-    return ["An uncertain case is forced into the wrong outcome.", "The desk loses time because the correct procedure was to hold."];
+    return ["An uncertain case is forced into the wrong outcome.", "The desk loses the callback, camera, or file-change clue that waiting would have exposed."];
   }
 
   return markedEvidenceCount === 0
@@ -1344,7 +1347,7 @@ export function MidnightRegistryGame() {
   const [checkedItems, setCheckedItems] = useState<ChecklistKey[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceKey[]>([]);
   const [toolCounts, setToolCounts] = useState<Record<ToolName, number>>({ ...emptyToolCounts });
-  const [toolLog, setToolLog] = useState("The desk lamp hums. Open the documents, compare the archive, then mark the approval form.");
+  const [toolLog, setToolLog] = useState("The desk lamp hums. Every stamp writes a person into the registry. Check paper, people, memory, and rules before you make anyone official.");
   const [visitorMood, setVisitorMood] = useState<VisitorMood>("idle");
   const [feedback, setFeedback] = useState<{ decision: Decision; correct: boolean; visitor: Visitor; consequences: string[] } | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -1370,7 +1373,7 @@ export function MidnightRegistryGame() {
     setCheckedItems([]);
     setSelectedEvidence([]);
     setToolCounts({ ...emptyToolCounts });
-    setToolLog("The desk lamp hums. Open the documents, compare the archive, then mark the approval form.");
+    setToolLog("The desk lamp hums. Every stamp writes a person into the registry. Check paper, people, memory, and rules before you make anyone official.");
     setVisitorMood("idle");
   };
 
@@ -1497,11 +1500,11 @@ export function MidnightRegistryGame() {
     const finalScore = score + (feedback?.correct ? 100 + feedback.visitor.threat : -70);
 
     if (mirrorMistakes === 0 && wrongCalls <= 2 && finalScore >= 1900) {
-      setEnding("Good Ending: The registry exposes the first false tenant. Dawn reaches Moonshadow and the locked rooms stay quiet.");
+      setEnding("Good Ending: The duplicate is blocked and enough real residents remain anchored. At dawn, the registry stops updating and your name is crossed off the hiring notice.");
     } else if (mirrorMistakes <= 2 && safety >= 45) {
-      setEnding("Survival Ending: You last until morning, but several names in the archive are crossed out in fresh ink.");
+      setEnding("Survival Ending: You last until morning, but too many residents have been rewritten. They greet you politely, and every greeting is slightly wrong.");
     } else {
-      setEnding("Bad Ending: One mirror guest reaches the stairs. By sunrise every doorbell rings with your voice.");
+      setEnding("Bad Ending: The replacement is registered. Morning finds a new clerk at your desk while the real Y. Xue knocks from outside the glass.");
     }
   };
 
@@ -1543,7 +1546,7 @@ export function MidnightRegistryGame() {
         <div className="registry-hero__content">
           <span>Moonshadow Apartments</span>
           <h1>Midnight Registry</h1>
-          <p>Night clerk desk. Compare the person at the glass against records, rules, and the calls coming from upstairs.</p>
+          <p>Night clerk desk. Every entry stamp can make a visitor real, erase an original resident, or leave your own replacement outside the glass.</p>
         </div>
       </section>
 
@@ -1881,15 +1884,15 @@ export function MidnightRegistryGame() {
               {feedback.correct
                 ? feedback.visitor.isMirror
                   ? feedback.decision === "security"
-                    ? "Security locks the lobby while the thing at the door forgets its face."
-                    : "The thing at the door stops copying its breathing."
+                    ? "Security locks the lobby before the record can legalize the thing at the door."
+                    : "The thing at the door loses the identity it was trying to occupy."
                   : feedback.decision === "wait"
-                    ? "Holding the case buys enough time for another source to confirm the truth."
+                    ? "Holding the case buys enough time for another source to reveal which record is moving."
                     : feedback.visitor.expectedAction === "allow"
-                      ? "A valid person reaches the stairs safely."
+                      ? "A valid person reaches the stairs without being rewritten."
                       : "The rule holds. A human visitor leaves without incident."
                 : feedback.visitor.isMirror
-                  ? "The mirror guest records your mistake."
+                  ? "The mirror guest records your mistake and starts occupying the name."
                   : "A legitimate resident or approved case is marked as a threat."}
             </p>
             <div className="registry-feedback-grid">

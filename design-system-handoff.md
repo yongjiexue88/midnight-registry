@@ -82,6 +82,7 @@ Use `public/assets/midnight-registry/characters/` for resident, visitor, and fal
 ### Props And Tools
 
 Use `public/assets/midnight-registry/props/` for desk tools, notices, stamps, evidence objects, ledgers, scanner outputs, and pressure UI.
+Each prop/tool/clue PNG in this directory is normalized to a `512 x 512` canvas with the full object centered and no external sheet labels.
 
 ### Sheets
 

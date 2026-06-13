@@ -37,6 +37,8 @@ export type RegistryErrorDetail = {
 export type RegistryNightPlan = {
   id: number;
   title: string;
+  storyTheme: string;
+  keyEvent: string;
   mechanic: string;
   visitorTarget: string;
   rules: string[];
@@ -49,7 +51,36 @@ export type RegistryNightPlan = {
   }[];
 };
 
+export type RegistryStoryPillar = {
+  id: string;
+  title: string;
+  detail: string;
+};
+
 export const registryAssetBase = "/assets/midnight-registry";
+
+export const registryStoryPillars: RegistryStoryPillar[] = [
+  {
+    id: "registry-errors",
+    title: "Impostors are registry errors",
+    detail: "They are not simply monsters at the door. They need a formal entry stamp so the building can treat their copied identity as real and erase the original resident.",
+  },
+  {
+    id: "identity-layers",
+    title: "Evidence has three identity layers",
+    detail: "Paper identity is documents and IDs. Social identity is calls, habits, relationships, and routines. True identity is exposed by private memories that were never written into the archive.",
+  },
+  {
+    id: "player-replacement",
+    title: "The clerk is part of the record",
+    detail: "Y. Xue begins as a temporary night clerk, then finds their own registry file marked waiting for replacement. The final visitor is nearly correct because the system is trying to log a second clerk.",
+  },
+  {
+    id: "hold-as-story",
+    title: "Hold creates story pressure",
+    detail: "Hold / wait is not a pause. It gives callbacks, CCTV, files, and visitor behavior time to change, while still risking reputation loss, danger, and timeout failures.",
+  },
+];
 
 export const registryCharacterAssets: RegistryCharacterAsset[] = [
   {
@@ -210,14 +241,14 @@ export const registrySheetAssets: RegistrySheetAsset[] = [
     title: "Character roster sheet",
     image: `${registryAssetBase}/character-roster-sheet.png`,
     usage: "Master sheet for resident, visitor, impostor, and final duplicate silhouettes.",
-    reviewNotes: ["16 labeled front-facing busts are present.", "Readable identity markers are visible.", "Individual character cards were cropped from this sheet."],
+    reviewNotes: ["16 labeled front-facing busts are present.", "Readable identity markers are visible.", "Individual character portraits use regenerated clean 512 x 768 files rather than labeled sheet crops."],
   },
   {
     id: "props-and-tools",
     title: "Props and verification tools",
     image: `${registryAssetBase}/props-and-tools-sheet.png`,
     usage: "Inspectable documents, desk tools, stamps, clues, and result badges.",
-    reviewNotes: ["Covers all requested tools: phone, CCTV, ledger, scanner, questions.", "Includes decision stamps and settlement badges.", "Includes evidence props tied to character habits."],
+    reviewNotes: ["Covers all requested tools: phone, CCTV, ledger, scanner, questions.", "Includes decision stamps and settlement badges.", "Individual prop exports are normalized to 512 x 512 canvases with full-object crops."],
   },
   {
     id: "ui-flow-components",
@@ -290,15 +321,19 @@ export const registryErrorDetails: RegistryErrorDetail[] = [
   { id: "habit-failure", label: "Habit failure", real: "Resident-specific routine", impostorExample: "Knows documents but misses habit", checkWith: "Extra question + phone" },
   { id: "duplicate-voice", label: "Duplicate voice", real: "One voice source", impostorExample: "Phone and door speak together", checkWith: "Phone system" },
   { id: "shadow-error", label: "Shadow direction", real: "Shadow follows desk lamp", impostorExample: "Shadow points at the light", checkWith: "CCTV + door view" },
+  { id: "unrecorded-memory", label: "Unrecorded memory", real: "Private greeting, habit, or relationship never written in the file", impostorExample: "Perfect documents but wrong desk phrase", checkWith: "Extra question + trusted resident call" },
+  { id: "duplicate-record", label: "Duplicate official record", real: "Only one active record may exist for a person", impostorExample: "Second Y. Xue asks to be registered as replacement", checkWith: "Tonight rules + ledger + CCTV" },
 ];
 
 export const registryNightPlans: RegistryNightPlan[] = [
   {
     id: 1,
-    title: "Tutorial Basics",
-    mechanic: "Teach name, room, photo, ID, and obvious mismatches.",
+    title: "Records Look Normal",
+    storyTheme: "The rules appear ordinary until the first refusal makes the ledger ink move.",
+    keyEvent: "The player catches a basic duplicate and assumes the threat is just a monster wearing a resident's face.",
+    mechanic: "Teach name, room, photo, ID, and obvious mismatches while framing each stamp as a reality-recording action.",
     visitorTarget: "8 visitors",
-    rules: ["Only listed residents may enter after 20:00.", "Missing ID is refused.", "Photo notes override excuses."],
+    rules: ["Only listed residents may enter after 20:00.", "Missing ID is refused.", "Photo notes override excuses.", "Do not register a person whose paper identity and lived habits disagree."],
     encounters: [
       { id: "n1-01", visitor: "Lin Anna", claim: "Resident 203", correctDecision: "allow", evidence: ["Name, room, ID, and mole match."] },
       { id: "n1-02", visitor: "Lin Anya", claim: "Resident 203", correctDecision: "reject", evidence: ["Name typo.", "Mole on wrong side."] },
@@ -312,10 +347,12 @@ export const registryNightPlans: RegistryNightPlan[] = [
   },
   {
     id: 2,
-    title: "Appointment List",
-    mechanic: "Non-residents need correct appointment, time, company, and room.",
+    title: "External Systems Lie",
+    storyTheme: "Outside paperwork begins to contradict the building's memory.",
+    keyEvent: "Blue Star Repair appears on tonight's work list even though old records say the company closed twelve years ago.",
+    mechanic: "Non-residents need correct appointment, time, company, and room, but old work orders may be bait for impossible entries.",
     visitorTarget: "10 visitors",
-    rules: ["Food delivery stays outside after 22:00.", "Sixth-floor maintenance is suspended.", "Forgotten-key claims require phone confirmation."],
+    rules: ["Food delivery stays outside after 22:00.", "Sixth-floor maintenance is suspended.", "Forgotten-key claims require phone confirmation.", "Any Blue Star Repair claim after 21:00 needs a second source."],
     encounters: [
       { id: "n2-01", visitor: "Han Dong", claim: "Blue Star repair at 20:30", correctDecision: "allow", evidence: ["Appointment matches.", "Task is 4F electrical box."] },
       { id: "n2-02", visitor: "Han Dong", claim: "Blue Heart repair at 23:30", correctDecision: "reject", evidence: ["Company wrong.", "Time wrong.", "Claims 7F."] },
@@ -331,10 +368,12 @@ export const registryNightPlans: RegistryNightPlan[] = [
   },
   {
     id: 3,
-    title: "Phone Verification",
+    title: "Two Places At Once",
+    storyTheme: "A copied person can stand at the glass while the original answers from upstairs.",
+    keyEvent: "A room line says the real resident is already inside, and a later call warns that the player is not the first clerk.",
     mechanic: "Phone can confirm, fail, reveal already-inside cases, or trigger anomalies.",
     visitorTarget: "9 visitors",
-    rules: ["Call rooms for arrivals after 22:30.", "If the room says the resident is already inside, refuse the door.", "Duplicate voice is security-level danger."],
+    rules: ["Call rooms for arrivals after 22:30.", "If the room says the resident is already inside, refuse the door.", "Duplicate voice is security-level danger.", "A person cannot be safely registered in two places at once."],
     encounters: [
       { id: "n3-01", visitor: "Chen Rui", claim: "Home early", correctDecision: "reject", evidence: ["Hospital phone says he is in surgery.", "Scar wrong side."] },
       { id: "n3-02", visitor: "Sun Hao", claim: "Resident 315", correctDecision: "allow", evidence: ["Three knocks.", "Right-thumb burn."] },
@@ -350,9 +389,11 @@ export const registryNightPlans: RegistryNightPlan[] = [
   {
     id: 4,
     title: "Resident Habits",
+    storyTheme: "Memory becomes more reliable than paperwork.",
+    keyEvent: "Perfect documents fail because the visitor does not know a greeting, private routine, or unrecorded relationship.",
     mechanic: "Documents can be right while routine and personality are wrong.",
     visitorTarget: "11 visitors",
-    rules: ["Ask one habit question for any perfect document match.", "Behavior contradictions outrank clean scans.", "Pets cannot enter unless listed in the archive."],
+    rules: ["Ask one habit question for any perfect document match.", "Behavior contradictions outrank clean scans.", "Pets cannot enter unless listed in the archive.", "Unrecorded memories are the hardest detail for a copied record to fake."],
     encounters: [
       { id: "n4-01", visitor: "Li Mei", claim: "Stairs only", correctDecision: "allow", evidence: ["Refuses elevator.", "Correct bracelet."] },
       { id: "n4-02", visitor: "Zhao Jun", claim: "Lost folder", correctDecision: "reject", evidence: ["Never arrives without folder.", "Does not ask for ledger."] },
@@ -370,9 +411,11 @@ export const registryNightPlans: RegistryNightPlan[] = [
   {
     id: 5,
     title: "Corrupted Archive",
+    storyTheme: "The archive starts rewriting reality while the player is reading it.",
+    keyEvent: "A resident file changes in front of the player: a feature flips side, then a status changes to never lived here.",
     mechanic: "Some records are polluted, so cross-check multiple sources.",
     visitorTarget: "12 visitors",
-    rules: ["A corrupted file is not proof by itself.", "Use phone and CCTV when archive ink moves.", "Scanner timestamps can expose reprinted badges."],
+    rules: ["A corrupted file is not proof by itself.", "Use phone and CCTV when archive ink moves.", "Scanner timestamps can expose reprinted badges.", "The management office may now disagree with reliable human witnesses."],
     encounters: [
       { id: "n5-01", visitor: "Archive Lin Anna", claim: "Photo changed", correctDecision: "wait", evidence: ["Call room before deciding.", "Archive portrait flickers."] },
       { id: "n5-02", visitor: "Chen Rui", claim: "Resident 410", correctDecision: "allow", evidence: ["Hospital line confirms break.", "Scar matches live CCTV."] },
@@ -391,9 +434,11 @@ export const registryNightPlans: RegistryNightPlan[] = [
   {
     id: 6,
     title: "Learning Impostors",
+    storyTheme: "The impostors begin learning the player's verification habits.",
+    keyEvent: "CCTV shows Y. Xue leaving the desk during a minute the player remembers sitting still.",
     mechanic: "Impostors remember your common questions and copy habits.",
     visitorTarget: "13 visitors",
-    rules: ["Do not rely on a single habit answer.", "Ask varied questions.", "Repeated perfect answers are suspicious after midnight."],
+    rules: ["Do not rely on a single habit answer.", "Ask varied questions.", "Repeated perfect answers are suspicious after midnight.", "CCTV evidence about the player must be checked against the entry ledger."],
     encounters: [
       { id: "n6-01", visitor: "Mina Park", claim: "Star signature", correctDecision: "reject", evidence: ["Answers learned habit.", "Hands continue painting in reflection."] },
       { id: "n6-02", visitor: "Li Mei", claim: "Flowers and stairs", correctDecision: "allow", evidence: ["Phone, camera, and bracelet all align."] },
@@ -412,10 +457,12 @@ export const registryNightPlans: RegistryNightPlan[] = [
   },
   {
     id: 7,
-    title: "Final Tenant",
-    mechanic: "One archived resident never existed. The final decision sets the ending.",
+    title: "Replacement Clerk",
+    storyTheme: "The player's own identity is challenged by a fully documented duplicate.",
+    keyEvent: "A second Y. Xue arrives with correct papers, a valid-looking badge, and the line: your shift is over.",
+    mechanic: "The final visitor is nearly correct; only accumulated evidence proves that registering them would replace the current clerk.",
     visitorTarget: "8 visitors plus final choice",
-    rules: ["Room 000 is not valid.", "The first-night ledger has one impossible name.", "Calling security may save the building but costs reputation."],
+    rules: ["Room 000 is not valid.", "Tonight has no relief shift.", "The real clerk is already logged as on duty.", "Do not register a second self."],
     encounters: [
       { id: "n7-01", visitor: "Lin Anna", claim: "203", correctDecision: "allow", evidence: ["True resident, confirms first-night memory."] },
       { id: "n7-02", visitor: "Zhou Qiming", claim: "506", correctDecision: "allow", evidence: ["Right glove and phone match."] },
@@ -424,7 +471,7 @@ export const registryNightPlans: RegistryNightPlan[] = [
       { id: "n7-05", visitor: "Wang Yulan", claim: "601", correctDecision: "allow", evidence: ["Old key and language match."] },
       { id: "n7-06", visitor: "False Tenant", claim: "New resident", correctDecision: "reject", evidence: ["No matching archive before Night 1."] },
       { id: "n7-07", visitor: "Rina Sol", claim: "Final medicine parcel", correctDecision: "wait", evidence: ["Legitimate but settlement-sensitive."] },
-      { id: "n7-08", visitor: "Clerk Duplicate", claim: "Shift change room 000", correctDecision: "security", evidence: ["Your badge.", "Phone calls itself.", "Room 000."] },
+      { id: "n7-08", visitor: "Clerk Duplicate", claim: "Shift change room 000", correctDecision: "security", evidence: ["All papers look correct.", "No shift change in rules.", "No shadow on CCTV.", "Y. Xue already on duty.", "Badge-back warning."] },
     ],
   },
 ];
@@ -451,8 +498,8 @@ export const registryUiComponents = [
 ];
 
 export const registryEndings = [
-  { id: "good", label: "Good ending", trigger: "Protect most residents, expose the impossible first-night tenant." },
-  { id: "normal", label: "Normal ending", trigger: "Survive seven nights with some missing residents." },
-  { id: "bad", label: "Bad ending", trigger: "Allow a key impostor and lose the building." },
-  { id: "hidden", label: "Hidden ending", trigger: "Find your own archive file and reject the duplicate." },
+  { id: "good", label: "Good ending", trigger: "Block the duplicate, preserve enough true residents, and leave at dawn with your name crossed off the hiring notice." },
+  { id: "normal", label: "Survival ending", trigger: "Survive until morning after too many residents have been replaced; everyone greets you slightly wrong." },
+  { id: "bad", label: "Bad ending", trigger: "Allow the replacement clerk; the next morning the real Y. Xue is outside the glass asking to be let back in." },
+  { id: "hidden", label: "Hidden ending", trigger: "Collect enough evidence to erase the duplicate record, destroying the registry's route in while removing yourself from the building record." },
 ];

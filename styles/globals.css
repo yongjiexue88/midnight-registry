@@ -1569,10 +1569,19 @@ a:focus-visible {
 .registry-sheet-card p,
 .registry-character-card p,
 .registry-night-card p,
+.registry-error-grid p,
 .registry-ending-grid p {
   margin: 0;
   color: #d8cab6;
   line-height: 1.45;
+}
+
+.registry-night-card p + p {
+  margin-top: 8px;
+}
+
+.registry-night-card p strong {
+  color: #d9b76e;
 }
 
 .registry-sheet-card ul,
@@ -1667,7 +1676,8 @@ a:focus-visible {
 
 .registry-prop-group img {
   width: 100%;
-  height: 112px;
+  height: auto;
+  aspect-ratio: 1 / 1;
   object-fit: contain;
   object-position: center;
   border-radius: 6px;
