@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { registryCharacterAssets, registryNightPlans } from "@/data/midnightRegistryDesignSystem";
+import { useTranslation } from "@/lib/translations";
 
 type Decision = "allow" | "reject" | "security" | "wait";
 type ToolName = "phone" | "scanner" | "camera" | "question";
@@ -1336,6 +1337,7 @@ function makeVisitorDocuments(visitor: Visitor) {
 }
 
 export function MidnightRegistryGame() {
+  const { t, toggleLanguage } = useTranslation();
   const [dayIndex, setDayIndex] = useState(0);
   const [visitorIndex, setVisitorIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -1558,7 +1560,7 @@ export function MidnightRegistryGame() {
           </div>
           <div className="registry-shift">
             <span>Case type</span>
-            <strong>{visitorTypeLabels[visitorType]}</strong>
+            <strong>{t(`visitor.${visitorType}`)}</strong>
           </div>
           <div className="registry-shift">
             <span>Visitor {visitorIndex + 1}/{dayVisitors.length}</span>
@@ -1572,6 +1574,9 @@ export function MidnightRegistryGame() {
             <span>Score</span>
             <strong>{score}</strong>
           </div>
+          <button type="button" onClick={toggleLanguage} style={{ padding: "0.25rem 0.5rem", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "4px", color: "white", cursor: "pointer", fontSize: "0.875rem" }}>
+            {t("ui.toggleLang")}
+          </button>
         </header>
 
         <div className="registry-stats">
@@ -1583,14 +1588,14 @@ export function MidnightRegistryGame() {
         <div className="registry-grid registry-grid--desk">
           <section className="registry-panel registry-arrival">
             <div className="registry-panel__title">
-              <span>At the door / {visitorTypeLabels[visitorType]}</span>
+              <span>At the door / {t(`visitor.${visitorType}`)}</span>
               <h3>{visitor.name}</h3>
             </div>
             <div className={`registry-portrait registry-portrait--${visitor.portrait} registry-portrait--${visitorMood}`} aria-label={`${visitor.name} portrait`}>
               <img src={portraitAsset.image} alt={`${portraitAsset.name} asset card`} />
             </div>
             <dl className="registry-facts">
-              <div><dt>Type</dt><dd>{visitorTypeLabels[visitorType]}</dd></div>
+              <div><dt>Type</dt><dd>{t(`visitor.${visitorType}`)}</dd></div>
               <div><dt>Room</dt><dd>{visitor.room}</dd></div>
               <div><dt>Role</dt><dd>{visitor.job}</dd></div>
               <div><dt>ID</dt><dd>{visitor.idCode}</dd></div>
@@ -1606,11 +1611,11 @@ export function MidnightRegistryGame() {
             </div>
             <div className="registry-desk-tabs" role="tablist" aria-label="Desk sources">
               {[
-                ["documents", "Documents", "fa-folder-open"],
-                ["archive", "Archive", "fa-book"],
-                ["notice", "Notice", "fa-thumbtack"],
-                ["ledger", "Ledger", "fa-list-check"],
-              ].map(([view, label, icon]) => (
+                ["documents", "ui.desk.documents", "fa-folder-open"],
+                ["archive", "ui.desk.archive", "fa-book"],
+                ["notice", "ui.desk.notice", "fa-thumbtack"],
+                ["ledger", "ui.desk.ledger", "fa-list-check"],
+              ].map(([view, labelKey, icon]) => (
                 <button
                   aria-selected={deskView === view}
                   key={view}
@@ -1618,7 +1623,7 @@ export function MidnightRegistryGame() {
                   type="button"
                 >
                   <i className={`fa-solid ${icon}`} aria-hidden="true" />
-                  <span>{label}</span>
+                  <span>{t(labelKey as string)}</span>
                 </button>
               ))}
             </div>
@@ -1750,7 +1755,7 @@ export function MidnightRegistryGame() {
                           type="button"
                         >
                           <i className={`fa-solid ${checkedItems.includes(item.key) ? "fa-square-check" : "fa-square"}`} aria-hidden="true" />
-                          <span>{item.label}</span>
+                          <span>{t(`checklist.${item.key}`)}</span>
                         </button>
                       ))}
                     </div>
@@ -1762,11 +1767,11 @@ export function MidnightRegistryGame() {
                             aria-pressed={selectedEvidence.includes(option.key)}
                             key={option.key}
                             onClick={() => toggleEvidence(option.key)}
-                            title={option.detail}
+                            title={t(`evidence.${option.key}.detail`)}
                             type="button"
                           >
                             <i className={`fa-solid ${selectedEvidence.includes(option.key) ? "fa-circle-check" : "fa-circle"}`} aria-hidden="true" />
-                            <span>{option.label}</span>
+                            <span>{t(`evidence.${option.key}`)}</span>
                           </button>
                         ))}
                       </div>
@@ -1797,15 +1802,15 @@ export function MidnightRegistryGame() {
           <div className="registry-tool-buttons" aria-label="Verification tools">
             <button disabled={toolCounts.phone >= phoneLines.length} type="button" onClick={() => useTool("phone")}>
               <img src="/assets/midnight-registry/props/phone-receiver-dial.png" alt="" aria-hidden="true" />
-              <span>{toolCounts.phone >= phoneLines.length ? "Phone locked" : `Call ${phoneLines[toolCounts.phone]?.label}`}</span>
+              <span>{toolCounts.phone >= phoneLines.length ? t("ui.tools.phoneLocked") : `${t("ui.tools.phoneCall")} ${phoneLines[toolCounts.phone]?.label}`}</span>
             </button>
             <button disabled={toolCounts.scanner >= 1} type="button" onClick={() => useTool("scanner")}>
               <img src="/assets/midnight-registry/props/id-scanner-device.png" alt="" aria-hidden="true" />
-              <span>Scan ID</span>
+              <span>{t("ui.tools.scanner")}</span>
             </button>
             <button disabled={toolCounts.camera >= 1} type="button" onClick={() => useTool("camera")}>
               <img src="/assets/midnight-registry/props/cctv-monitor.png" alt="" aria-hidden="true" />
-              <span>Camera</span>
+              <span>{t("ui.tools.camera")}</span>
             </button>
           </div>
           <div className="registry-tool-log">
@@ -1834,19 +1839,19 @@ export function MidnightRegistryGame() {
         <footer className="registry-decisions">
           <button className="registry-decision registry-decision--allow" type="button" onClick={() => decide("allow")}>
             <img src="/assets/midnight-registry/props/approve-stamp.png" alt="" aria-hidden="true" />
-            <span>{decisionLabels.allow}</span>
+            <span>{t("decision.allow")}</span>
           </button>
           <button className="registry-decision registry-decision--reject" type="button" onClick={() => decide("reject")}>
             <img src="/assets/midnight-registry/props/deny-stamp.png" alt="" aria-hidden="true" />
-            <span>{decisionLabels.reject}</span>
+            <span>{t("decision.reject")}</span>
           </button>
           <button className="registry-decision registry-decision--security" type="button" onClick={() => decide("security")}>
             <img src="/assets/midnight-registry/props/security-call-stamp.png" alt="" aria-hidden="true" />
-            <span>{decisionLabels.security}</span>
+            <span>{t("decision.security")}</span>
           </button>
           <button className="registry-decision registry-decision--wait" type="button" onClick={() => decide("wait")}>
             <img src="/assets/midnight-registry/props/wait-token.png" alt="" aria-hidden="true" />
-            <span>{decisionLabels.wait}</span>
+            <span>{t("decision.wait")}</span>
           </button>
         </footer>
       </section>
