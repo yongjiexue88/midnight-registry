@@ -10,5 +10,7 @@ storybook-static/
 .vercel/
 output/
 .DS_Store
+*.swp
+*.swo
 tsconfig.tsbuildinfo
 .vercel
