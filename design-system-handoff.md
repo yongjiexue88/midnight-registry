@@ -1,265 +1,113 @@
-# Pocket Town Companions Design Handoff
+# Midnight Registry Design Handoff
 
-Figma file: https://www.figma.com/design/gahuXHpSIkv0Dtyoj30lez
+Figma file: pending refreshed Midnight Registry handoff.
 
-## Figma Implementation Status
-
-The Figma file was created through Figma MCP. The account is on Figma Starter, so two platform limits changed the implementation shape:
-
-- Starter allows only 3 real Figma pages. The requested 12-page structure is represented as named sections across `00 - Foundations`, `01 - Components & Assets`, and `02 - Screens, Flow & Export`.
-- The MCP tool-call limit was reached before `02 - Screens, Flow & Export` could be populated. Completed in Figma: file creation, token variables, text styles, shadow styles, the Foundations page, the Components & Assets page, reusable component sets, export asset shelves, and uploaded existing PNG pet/town assets.
-
-The full target structure and screen/flow/export specs below remain the source of truth for the next Figma continuation pass.
+Pocket Town Companions is archived. Do not use the old pet-care Figma pages, pet assets, town-scene references, or deleted Pet Town components as source material unless the project direction is explicitly revived.
 
 ## Source Alignment
 
-The design system is grounded in the current Next/React prototype, `public/assets/reference-pocket-town-companions.png`, `public/assets/town-plaza-scene.png`, and the six existing pet raster assets. The requested plan fits the current prototype well: the prototype already has a top HUD, pet care/status panel, central town scene, task/event rail, pet carousel, inventory/reward modal, and game-like button/card styling.
+The current design system is grounded in the playable Midnight Registry prototype and Storybook surface:
 
-Main gaps to fill in Figma v1:
+- `components/midnight/MidnightRegistryGame.tsx`
+- `components/midnight/MidnightRegistryDesignSystem.tsx`
+- `data/midnightRegistryDesignSystem.ts`
+- `public/assets/midnight-registry/`
+- `/design-system`
+- `stories/MidnightRegistryDesignSystem.stories.tsx`
 
-- Dedicated reusable component variants instead of one-off React markup.
-- Explicit design tokens for colors, radius, shadows, and typography.
-- Separate asset shelves for pet expressions, town locations, icon sizes, reward decorations, and export naming.
-- Desktop and mobile screen specs that front-end code can map to React components.
+The reusable system must support the manual door-clerk verification loop: inspect documents, compare resident records and notices, call rooms or contacts, ask questions, mark evidence, then decide allow, refuse, security, or hold.
 
 ## Design Tokens
 
-### Colors
-
-| Token | Value |
+| Token | Current Direction |
 | --- | --- |
-| `--color-primary` | `#6CA8FF` |
-| `--color-secondary` | `#FF9DB5` |
-| `--color-accent` | `#FFD86B` |
-| `--color-success` | `#7DDEB4` |
-| `--color-danger` | `#FF6B6B` |
-| `--color-purple` | `#A98BFF` |
-| `--color-bg` | `#FFF8E8` |
-| `--color-surface` | `#FFFFFF` |
-| `--color-text-main` | `#3A2E2A` |
-| `--color-text-soft` | `#8C7468` |
-| `--color-border` | `#4A352E` |
+| Background | near-black lobby, desk, registry, and monitor surfaces |
+| Paper | aged registry paper, folders, notices, and stamped forms |
+| Accent | warning red, evidence amber, sickly green, scanner blue |
+| Typography | compact, legible clerk-interface text with stronger label hierarchy |
+| Shape | restrained rectangular controls, 8px or smaller radii for cards and tools |
+| Motion | pressure and state feedback, not decorative animation |
 
-### Radius
+## Reusable Component Targets
 
-| Token | Value |
-| --- | --- |
-| `--radius-sm` | `8px` |
-| `--radius-md` | `14px` |
-| `--radius-lg` | `22px` |
-| `--radius-xl` | `32px` |
-| `--radius-pill` | `999px` |
+- `NightStartNotice`
+- `VisitorAtDoorPanel`
+- `ResidentArchiveCard`
+- `VisitorDocumentCard`
+- `DailyNoticePanel`
+- `AppointmentPanel`
+- `EntryLogPanel`
+- `EvidenceComparisonRow`
+- `PhoneVerificationTool`
+- `ScannerResultTool`
+- `CctvMonitorTool`
+- `QuestionPromptTool`
+- `ApprovalForm`
+- `DecisionControls`
+- `NightSettlement`
+- `EndingSummary`
 
-### Shadows
+## Variant Contract
 
-| Token | Value |
-| --- | --- |
-| `--shadow-button` | `0 5px 0 rgba(58, 46, 42, 0.18)` |
-| `--shadow-card` | `0 10px 24px rgba(58, 46, 42, 0.12)` |
-| `--shadow-modal` | `0 18px 40px rgba(58, 46, 42, 0.2)` |
+### DecisionControls
 
-### Typography
+Actions: `Allow`, `Refuse`, `Security`, `Hold`.
 
-Use `Nunito` for UI text, `Fredoka` or `Baloo 2` for logo/display moments, and system sans-serif fallback for Chinese text.
+Required states: default, selected, unavailable, submitted, correct, wrong. The controls should be visually distinct enough for repeated desk-work use and must not rely only on color.
 
-| Style | Size / Line Height |
-| --- | --- |
-| Display | `40 / 48` |
-| H1 | `32 / 40` |
-| H2 | `24 / 32` |
-| H3 | `20 / 28` |
-| Body | `16 / 24` |
-| Small | `14 / 20` |
-| Tiny | `12 / 16` |
+### EvidenceComparisonRow
 
-## Figma Pages
+Evidence types: name, room, ID, appearance, habit, appointment, call, rule, ledger.
 
-1. `00 - Design Tokens`
-2. `01 - Brand & Logo`
-3. `02 - Core Components`
-4. `03 - Game HUD`
-5. `04 - Pet Assets`
-6. `05 - Town Locations`
-7. `06 - Task System`
-8. `07 - Inventory & Shop`
-9. `08 - Reward Modals`
-10. `09 - Screens`
-11. `10 - Prototype Flow`
-12. `11 - Export Assets`
+Required states: unchecked, match, mismatch, suspicious, resolved. Rows should support concise notes and visible confidence/status markers.
 
-## Reusable Component List
+### VerificationTool
 
-- `Button / Primary`
-- `Button / Secondary`
-- `Button / Ghost`
-- `Button / Danger`
-- `Button / Disabled`
-- `Button / Icon`
-- `HUD / ResourceBar`
-- `HUD / StatBar`
-- `Card / Pet`
-- `Card / Task`
-- `Card / Location`
-- `Card / InventoryItem`
-- `Modal / Reward`
-- `Navigation / BottomNav`
+Tools: phone, scanner, CCTV, question prompt.
 
-## Component Variant Contract
+Required states: idle, available, used, blocked, corrupted, contradiction found. The component should expose the evidence output in a reusable text block rather than as one-off prose.
 
-### Button
+### NightSettlement
 
-Axes: `Style=Primary|Secondary|Ghost|Danger|Disabled|Icon`, `State=Default|Hover|Pressed|Disabled`.
+Outcomes: survived, fired, replaced, entity admitted, perfect shift.
 
-Required anatomy: icon slot, label, large radius, thick dark border, bottom game shadow, pressed vertical offset.
+Required content: night number, visitor accuracy, mistake list, sanity pressure, unlocked notice, and next-night setup.
 
-### HUD / ResourceBar
+## Asset Shelves
 
-Anatomy: username, avatar, coins, stars, energy, add buttons. Resource items should support `Resource=Coins|Stars|Energy|Gems|Treats`.
+### Characters
 
-### HUD / StatBar
+Use `public/assets/midnight-registry/characters/` for resident, visitor, and false-tenant portraits. Keep each character export tied to a stable data ID in `data/midnightRegistryDesignSystem.ts`.
 
-Axis: `Stat=Hunger|Mood|Cleanliness|Energy|EXP|Bond`.
+### Props And Tools
 
-Anatomy: icon, label, progress bar, numeric value.
+Use `public/assets/midnight-registry/props/` for desk tools, notices, stamps, evidence objects, ledgers, scanner outputs, and pressure UI.
 
-### Card / Pet
+### Sheets
 
-Axis: `State=Default|Selected|Locked|Level Up Ready|Tired|Hungry`.
+Use these overview sheets for Figma reference shelves:
 
-Anatomy: pet avatar, name, level, main attribute, mood status, rarity badge.
+- `public/assets/midnight-registry/character-roster-sheet.png`
+- `public/assets/midnight-registry/props-and-tools-sheet.png`
+- `public/assets/midnight-registry/ui-flow-components-sheet.png`
+- `public/assets/midnight-registry/night-progression-encounters-sheet.png`
 
-### Card / Task
+## Screen Targets
 
-Axis: `Type=Daily|Care|Training|Work|Adventure`, `State=Default|Completed|Locked|In Progress`.
+### Playable Desk
 
-Anatomy: task icon, task name, location, recommended stat, energy cost, success rate, duration, reward preview, CTA button.
+Primary layout: dark apartment lobby and clerk desk, visitor panel, archive comparison, rules/notices, evidence tools, approval form, and decision controls.
 
-### Modal / Reward
+### Design System
 
-Axis: `Type=Daily Reward|Task Complete|Level Up|Rare Drop|Multi Reward`.
+Primary layout: reusable component shelves grouped by characters, props, UI states, evidence states, nightly flows, and endings.
 
-Anatomy: reward icon, reward name, quantity, rarity, claim button, sparkle/burst decoration.
+### Mobile
 
-## Pet Assets
+Use a stacked verification workflow. The visitor, document, archive, and decision areas must remain reachable without hiding the four decision outcomes.
 
-Existing local source assets:
+## Implementation Notes
 
-- `public/assets/pet-biscuit-corgi.png`
-- `public/assets/pet-mochi-kitten.png`
-- `public/assets/pet-pudding-bunny.png`
-- `public/assets/pet-nugget-shiba.png`
-- `public/assets/pet-coco-panda.png`
-- `public/assets/pet-peanut-hedgehog.png`
-
-The current Figma v1 should use these as full-body source art and create avatar/export frames from them. Expression frames should be named now and replaced with dedicated generated art later if higher fidelity is needed.
-
-## Export Asset List
-
-### Pets
-
-- `pet-biscuit-corgi-avatar.png`
-- `pet-biscuit-corgi-full.png`
-- `pet-biscuit-corgi-idle.png`
-- `pet-biscuit-corgi-happy.png`
-- `pet-biscuit-corgi-hungry.png`
-- `pet-biscuit-corgi-sleep.png`
-- `pet-biscuit-corgi-sick.png`
-- `pet-biscuit-corgi-level-up.png`
-- Repeat the same suffixes for `mochi-kitten`, `pudding-bunny`, `nugget-shiba`, `coco-panda`, and `peanut-hedgehog`.
-
-### Locations
-
-- `location-town-plaza-map-icon.svg`
-- `location-town-plaza-card.png`
-- `location-town-plaza-tile.png`
-- `location-town-plaza-locked.png`
-- `location-town-plaza-active.png`
-- Repeat the same suffixes for `cafe`, `library`, `training-yard`, `bath-house`, `market`, `home-room`, and `adventure-gate`.
-
-### Icons
-
-- `icon-stat-charm.svg`
-- `icon-stat-strength.svg`
-- `icon-stat-intelligence.svg`
-- `icon-stat-luck.svg`
-- `icon-stat-energy.svg`
-- `icon-stat-hunger.svg`
-- `icon-stat-mood.svg`
-- `icon-stat-cleanliness.svg`
-- `icon-stat-bond.svg`
-- `icon-resource-coins.svg`
-- `icon-resource-stars.svg`
-- `icon-resource-gems.svg`
-- `icon-resource-exp.svg`
-- `icon-resource-food.svg`
-- `icon-resource-toy.svg`
-- `icon-resource-furniture.svg`
-- `icon-resource-outfit.svg`
-- `icon-resource-medicine.svg`
-
-### UI and Rewards
-
-- `ui-button-primary.svg`
-- `ui-button-secondary.svg`
-- `ui-button-danger.svg`
-- `ui-button-icon.svg`
-- `reward-stars-burst.png`
-- `reward-coins-stack.png`
-- `reward-gems-burst.png`
-- `reward-rare-drop.png`
-
-## Desktop Main Screen
-
-Layout:
-
-- Top: logo, resource bar, user avatar/actions.
-- Left: active pet state panel with stat bars.
-- Center: town scene and location hotspots.
-- Right: task/event list.
-- Bottom: pet companion carousel and quick actions.
-- Lower right: reward and inventory modal entry buttons.
-
-Recommended React structure:
-
-```jsx
-<GameShell>
-  <TopHud />
-  <DesktopLayout>
-    <PetStatusPanel />
-    <TownScene />
-    <TaskEventPanel />
-  </DesktopLayout>
-  <CompanionCarousel />
-  <QuickActions />
-</GameShell>
-```
-
-## Mobile Main Screen
-
-Layout:
-
-- Top resource bar.
-- Center town scene.
-- Horizontal pet status cards.
-- Task list.
-- Bottom navigation.
-
-Recommended breakpoint: desktop layout above `1024px`, mobile layout below `768px`, tablet layout can keep two columns.
-
-## Prototype Flow
-
-1. `Town` default screen.
-2. Tap pet card to select companion.
-3. Tap location hotspot to filter tasks.
-4. Start task, show `In Progress` task state.
-5. Complete task, open `Modal / Reward`.
-6. Claim reward, update HUD resources.
-7. Open Inventory, use item on pet, update stat bars.
-8. Friends tab shows friend pets and visit rewards.
-
-## Front-End Notes
-
-- Keep CSS variables aligned with the Figma tokens above.
-- Treat `Button`, `StatBar`, `PetCard`, `TaskCard`, `RewardModal`, and `BottomNav` as first React components.
-- Use image assets only for pets, location scenery, and reward art; use SVG/icon components for resource/stat icons.
-- Avoid text embedded in exported images. All UI copy should stay in React.
+- Storybook assets should be reusable in the game UI, not static screenshots only.
+- Figma components should map to current React component anatomy where possible.
+- Avoid reviving deleted Pet Town APIs, routes, stores, seed data, CSS classes, or assets.
