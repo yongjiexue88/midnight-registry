@@ -15,11 +15,13 @@ function pngDimensions(filePath) {
   };
 }
 
-function verifyDirectory(relativeDirectory, expectedWidth, expectedHeight) {
+function verifyDirectory(relativeDirectory, expectedWidth, expectedHeight, expectedCount) {
   const directory = path.join(root, relativeDirectory);
   const files = fs.readdirSync(directory).filter((file) => file.endsWith(".png")).sort();
-  if (files.length === 0) {
-    throw new Error(`${relativeDirectory} contains no PNG assets`);
+  if (files.length !== expectedCount) {
+    throw new Error(
+      `${relativeDirectory} must contain ${expectedCount} PNG assets, found ${files.length}`,
+    );
   }
 
   const failures = [];
@@ -43,9 +45,10 @@ const characterCount = verifyDirectory(
   "public/assets/midnight-registry/characters",
   512,
   768,
+  16,
 );
-const propCount = verifyDirectory("public/assets/midnight-registry/props", 512, 512);
-const cctvCount = verifyDirectory("public/assets/midnight-registry/cctv", 512, 512);
+const propCount = verifyDirectory("public/assets/midnight-registry/props", 512, 512, 39);
+const cctvCount = verifyDirectory("public/assets/midnight-registry/cctv", 512, 512, 8);
 
 const designSystemPath = path.join(root, "data/midnightRegistryDesignSystem.ts");
 const designSystem = fs.readFileSync(designSystemPath, "utf8");

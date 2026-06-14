@@ -39,6 +39,8 @@ Historical notes for that archived prototype are intentionally not treated as cu
 - `npm run lint` validates TypeScript.
 - `npm run build` validates the production Next.js build and both `/` and `/design-system` routes.
 - Contact-sheet review confirms individual exports contain no neighboring sheet art or filename strips.
+- In-app browser review exercised prep, archive, switchboard, hold investigation, persistent resident status, visitor advancement, and correct-refusal feedback.
+- Runtime visual finding fixed: switchboard line cards now use a dark high-contrast surface, and verification-tool labels stack without mid-word wrapping.
 
 ## Remaining Product Work
 

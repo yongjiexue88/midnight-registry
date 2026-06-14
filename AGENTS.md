@@ -23,3 +23,5 @@ When implementing from a selected generated mock, treat that image as the source
 - Hold/wait should work as a narrative investigation tool: waiting can reveal callbacks, CCTV contradictions, changing files, or visitor reactions, while carrying reputation and danger risks.
 - The seven-night story should reveal a past whole-building registration error, Blue Star Repair's impossible work orders, unreliable management, archive pollution, learning impostors, and the final Y. Xue shift-change duplicate.
 - Midnight Registry exported assets must be clean reusable game materials: no external sheet labels, filename strips, card borders, or neighboring artwork may remain in individual exports; characters use uniform `512 x 768` portrait canvases and props/tools/clues use uniform `512 x 512` canvases, with contact-sheet review before considering the asset pass complete.
+- Midnight Registry 的主游戏可见内容默认使用简体中文，包括剧情、住户档案、规则、工具结果、监控、结算、维修小游戏和结局；英文仅可保留在稳定的内部 ID 与判定逻辑中。
+- 留置 / 等待必须是可互动的调查分支：玩家选择回拨、复查监控或观察反应，取得不同证据后再进行允许、拒绝、呼叫安保或继续留置的二次裁决。

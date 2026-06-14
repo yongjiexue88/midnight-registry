@@ -12,7 +12,7 @@ interface I18nState {
 export const useI18nStore = create<I18nState>()(
   persist(
     (set) => ({
-      language: "en",
+      language: "zh",
       setLanguage: (lang) => set({ language: lang }),
       toggleLanguage: () => set((state) => ({ language: state.language === "en" ? "zh" : "en" })),
     }),

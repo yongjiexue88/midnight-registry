@@ -952,6 +952,20 @@ a:focus-visible {
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.28);
 }
 
+.registry-tool-buttons button {
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.registry-tool-buttons button span {
+  max-width: 100%;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
 .registry-tool-buttons button:hover,
 .registry-modal__card button:hover,
 .registry-question-board button:hover {
@@ -2327,6 +2341,49 @@ a:focus-visible {
   animation: registry-phone-connected 0.35s ease-out both;
 }
 
+.registry-paper--phone-board .registry-phone-line {
+  display: block;
+  min-height: 76px;
+  padding: 11px 12px;
+  border: 1px solid rgba(102, 207, 220, 0.24);
+  border-radius: 6px;
+  color: #f7ead2;
+  background: linear-gradient(180deg, #24303b, #151c24);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+  text-align: left;
+}
+
+.registry-paper--phone-board .registry-phone-line:hover {
+  border-color: rgba(102, 207, 220, 0.58);
+  background: linear-gradient(180deg, #2b3a46, #18222b);
+}
+
+.registry-paper--phone-board .registry-phone-line:disabled {
+  opacity: 0.58;
+}
+
+.registry-phone-line__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.registry-phone-line__title i {
+  color: #edc270;
+}
+
+.registry-phone-line__title strong {
+  color: #f2cf88;
+  font-size: 0.85rem;
+}
+
+.registry-phone-line p {
+  margin: 5px 0 0;
+  color: #c7d4d8;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 .registry-question-card:active {
   animation: registry-question-flip 0.32s ease-out both;
 }
@@ -2475,7 +2532,7 @@ a:focus-visible {
   font-size: 1.4rem;
 }
 
-.registry-hold-clock.is-waiting i {
+.registry-hold-clock.is-choosing i {
   animation: registry-hourglass-turn 0.72s steps(2, end) infinite;
 }
 
@@ -2511,6 +2568,48 @@ a:focus-visible {
   font-size: 0.68rem;
   padding: 4px 8px;
   text-transform: uppercase;
+}
+
+.registry-hold-prompt {
+  color: #f6dfb4;
+  display: block;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  margin: 14px 0 8px;
+}
+
+.registry-hold-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.registry-hold-actions--investigate {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.registry-hold-actions--decision {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.registry-hold-actions button {
+  min-height: 52px;
+}
+
+.registry-hold-actions--decision button[data-decision="allow"] {
+  border-color: rgba(77, 207, 135, 0.55);
+}
+
+.registry-hold-actions--decision button[data-decision="reject"] {
+  border-color: rgba(255, 93, 96, 0.55);
+}
+
+.registry-hold-actions--decision button[data-decision="security"] {
+  border-color: rgba(184, 111, 232, 0.58);
+}
+
+.registry-hold-actions--decision button[data-decision="wait"] {
+  border-color: rgba(237, 194, 112, 0.6);
 }
 
 .registry-repair-sources {

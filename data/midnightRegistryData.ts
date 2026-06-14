@@ -113,27 +113,27 @@ export type OfficeUpgrade = {
 export const officeUpgrades: OfficeUpgrade[] = [
   {
     id: "hotline",
-    name: "Copper Hotline",
-    benefit: "+2 phone calls each shift.",
-    sideEffect: "The amplified line costs 3 Stability when a shift begins.",
+    name: "铜线直拨台",
+    benefit: "每班次增加 2 次电话。",
+    sideEffect: "增强线路会在开班时消耗 3 点稳定度。",
   },
   {
     id: "camera-buffer",
-    name: "CCTV Frame Buffer",
-    benefit: "+2 camera checks each shift.",
-    sideEffect: "Stored frames cost 2 Reputation because management can audit them.",
+    name: "监控帧缓存",
+    benefit: "每班次增加 2 次监控检查。",
+    sideEffect: "物业可审计缓存画面，开班时损失 2 点声誉。",
   },
   {
     id: "scanner-capacitor",
-    name: "Scanner Capacitor",
-    benefit: "+2 ID scans each shift.",
-    sideEffect: "The overcharged desk starts each shift with 2 less Safety.",
+    name: "扫描器电容",
+    benefit: "每班次增加 2 次证件扫描。",
+    sideEffect: "过载设备使开班安全值降低 2 点。",
   },
   {
     id: "archive-lock",
-    name: "Archive Memory Lock",
-    benefit: "+20 archive-repair points during daytime prep.",
-    sideEffect: "The locked index removes 2 interview questions each shift.",
+    name: "档案记忆锁",
+    benefit: "白日准备时增加 20 点档案修复额度。",
+    sideEffect: "锁定索引会让每班次少 2 次提问。",
   },
 ];
 
@@ -204,23 +204,23 @@ export const cctvSceneAssets = [
 ] as const;
 
 export const checklistItems: { key: ChecklistKey; label: string }[] = [
-  { key: "documents", label: "Paper identity checked" },
-  { key: "archive", label: "Archive reality matched" },
-  { key: "phone", label: "Social identity confirmed" },
-  { key: "appearance", label: "Appearance compared" },
-  { key: "rules", label: "Night rules reviewed" },
-  { key: "ledger", label: "Entry log checked" },
+  { key: "documents", label: "纸质身份已核对" },
+  { key: "archive", label: "住户档案已比对" },
+  { key: "phone", label: "社会关系已确认" },
+  { key: "appearance", label: "外貌特征已对比" },
+  { key: "rules", label: "夜间规定已复核" },
+  { key: "ledger", label: "出入登记已检查" },
 ];
 
 export const evidenceOptions: EvidenceOption[] = [
-  { key: "id", label: "Paper identity mismatch", detail: "Printed identity, badge, checksum, or room number does not line up." },
-  { key: "appearance", label: "Appearance mismatch", detail: "Face, feature side, carried item, clothing, or camera view contradicts the archive." },
-  { key: "schedule", label: "Schedule conflict", detail: "Arrival, curfew, shift, or already-inside timing is impossible." },
-  { key: "phone", label: "Social identity conflict", detail: "Room, employer, management, or neighbor call contradicts the claim." },
-  { key: "behavior", label: "Unrecorded memory failure", detail: "Habit answer, greeting, speech pattern, or private routine is wrong." },
-  { key: "rules", label: "Rule violation", detail: "Tonight's notice blocks this entrant or requires escalation." },
-  { key: "appointment", label: "Appointment mismatch", detail: "Visitor, courier, maintenance, company, time, room, or work order is wrong." },
-  { key: "ledger", label: "Reality ledger conflict", detail: "Today's in/out record conflicts with the person at the glass." },
+  { key: "id", label: "纸质身份不符", detail: "姓名、工牌、校验码或房号存在矛盾。" },
+  { key: "appearance", label: "外貌特征不符", detail: "面部、特征位置、随身物品、衣着或监控画面与档案冲突。" },
+  { key: "schedule", label: "行程时间冲突", detail: "到达时间、宵禁、班次或已在楼内的状态不可能同时成立。" },
+  { key: "phone", label: "社会关系冲突", detail: "房间、雇主、物业或邻居的通话与来客说法矛盾。" },
+  { key: "behavior", label: "未记录记忆错误", detail: "习惯、问候、说话方式或私人日常回答错误。" },
+  { key: "rules", label: "违反今夜规则", detail: "今夜通知禁止进入，或要求升级处理。" },
+  { key: "appointment", label: "预约信息不符", detail: "访客、公司、时间、房间或工单信息错误。" },
+  { key: "ledger", label: "现实登记冲突", detail: "今日进出记录与玻璃外的人不能同时成立。" },
 ];
 
 export const emptyToolCounts: Record<ToolName, number> = {
@@ -231,19 +231,19 @@ export const emptyToolCounts: Record<ToolName, number> = {
 };
 
 export const visitorTypeLabels: Record<VisitorType, string> = {
-  resident: "Resident",
-  visitor: "Registered visitor",
-  maintenance: "Maintenance",
-  courier: "Courier",
-  emergency: "Emergency staff",
-  clerk: "Desk staff",
+  resident: "住户",
+  visitor: "登记访客",
+  maintenance: "维修人员",
+  courier: "快递员",
+  emergency: "急救人员",
+  clerk: "前台职员",
 };
 
 export const decisionLabels: Record<Decision, string> = {
-  allow: "Allow entry",
-  reject: "Refuse entry",
-  security: "Call security",
-  wait: "Hold / wait",
+  allow: "允许进入",
+  reject: "拒绝进入",
+  security: "呼叫安保",
+  wait: "留置等待",
 };
 
 export const residents: Resident[] = [

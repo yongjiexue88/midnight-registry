@@ -11,6 +11,7 @@ import {
   registryStoryPillars,
   registryUiComponents,
 } from "@/data/midnightRegistryDesignSystem";
+import { playableVisitors } from "@/data/midnightRegistryData";
 
 const groupedProps = registryProps.reduce<Record<string, typeof registryProps>>((groups, prop) => {
   groups[prop.category] = [...(groups[prop.category] ?? []), prop];
@@ -34,8 +35,6 @@ function getPropImage(id: string) {
 }
 
 export function MidnightRegistryDesignSystem() {
-  const totalEncounters = registryNightPlans.reduce((sum, night) => sum + night.encounters.length, 0);
-
   return (
     <main className="registry-storybook">
       <section className="registry-storybook__hero">
@@ -57,8 +56,8 @@ export function MidnightRegistryDesignSystem() {
             <dd>{registryProps.length}</dd>
           </div>
           <div>
-            <dt>Night encounters</dt>
-            <dd>{totalEncounters}</dd>
+            <dt>Playable cases</dt>
+            <dd>{playableVisitors.length}</dd>
           </div>
           <div>
             <dt>Story nights</dt>
