@@ -5,6 +5,7 @@ import {
   registryCctvAssets,
   registryEndings,
   registryErrorDetails,
+  registryMonsterAssets,
   registryNightPlans,
   registryProps,
   registrySheetAssets,
@@ -58,6 +59,10 @@ export function MidnightRegistryDesignSystem() {
           <div>
             <dt>Playable cases</dt>
             <dd>{playableVisitors.length}</dd>
+          </div>
+          <div>
+            <dt>Monster templates</dt>
+            <dd>{registryMonsterAssets.length}</dd>
           </div>
           <div>
             <dt>Story nights</dt>
@@ -135,6 +140,34 @@ export function MidnightRegistryDesignSystem() {
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
           <span>04</span>
+          <h2>Monster Reveal Templates</h2>
+        </div>
+        <div className="registry-monster-grid">
+          {registryMonsterAssets.map((monster) => (
+            <article key={monster.id}>
+              <header>
+                <span>{monster.type}</span>
+                <h3>{monster.label}</h3>
+                <strong>{monster.handling.join(" / ")}</strong>
+              </header>
+              <div>
+                {monster.stageImages.map((image, index) => (
+                  <img key={image} src={image} alt={`${monster.label} stage ${index}`} />
+                ))}
+              </div>
+              <ul>
+                {monster.revealNotes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="registry-storybook__section">
+        <div className="registry-storybook__heading">
+          <span>05</span>
           <h2>Props, Tools, And Decision Assets</h2>
         </div>
         <div className="registry-prop-groups">
@@ -158,7 +191,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>05</span>
+          <span>06</span>
           <h2>CCTV Scene Materials</h2>
         </div>
         <div className="registry-cctv-asset-grid">
@@ -177,7 +210,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>06</span>
+          <span>07</span>
           <h2>Animation Event Library</h2>
         </div>
         <div className="registry-animation-grid">
@@ -194,7 +227,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>07</span>
+          <span>08</span>
           <h2>Reusable UI Components</h2>
         </div>
         <div className="registry-component-grid">
@@ -206,7 +239,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>08</span>
+          <span>09</span>
           <h2>Error Detail Rules</h2>
         </div>
         <div className="registry-error-grid">
@@ -234,7 +267,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>09</span>
+          <span>10</span>
           <h2>Seven-Night Encounter Flow</h2>
         </div>
         <div className="registry-night-grid">
@@ -269,7 +302,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>08</span>
+          <span>11</span>
           <h2>Endings</h2>
         </div>
         <div className="registry-ending-grid">

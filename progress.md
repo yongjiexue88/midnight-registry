@@ -57,3 +57,5 @@ Historical notes for that archived prototype are intentionally not treated as cu
 - Sprint 4: desk-like prep phase, ten prep sprites, shift transition, 15 generated WAV effects, stamp feedback, and stat-damage animation.
 - Maintenance: 68-case scope unified, endless count renamed, runtime asset verification extended, and `/animation-debug` added.
 - Runtime review exercised the three-case tutorial, 208-room phone conflict, CCTV freeze/save, security result, scanner, question, evidence warning, and hold investigation.
+- V4 monster/audio pass: added six Borrower monster profiles, 24 clean 512 x 768 reveal-stage PNGs plus a contact sheet, 68 generated WAV effects, unified audio mapping, first-night 8-case monster sample order, exposure meter, abnormal observation panel, containment actions, and design-system monster template coverage.
+- Verification on 2026-06-14: `npm run verify:assets`, `npm run lint`, and `npm run build` passed; in-app Browser opened the local preview, first-case tutorial flow completed correctly, design-system monster section loaded, and Playwright screenshots/state checks covered desktop and 390px mobile viewports without console errors.

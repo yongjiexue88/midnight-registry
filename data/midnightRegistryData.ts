@@ -11,6 +11,34 @@ export type VisitorMood = "idle" | "talking" | "waiting" | "nervous" | "angry" |
 export type GameMode = "story" | "challenge" | "endless";
 export type ResidentStatus = "active" | "stranded" | "replaced";
 export type OfficeUpgradeId = "hotline" | "camera-buffer" | "scanner-capacitor" | "archive-lock";
+export type MonsterType =
+  | "none"
+  | "failed_mimic"
+  | "parasite_bloom"
+  | "structure_breaker"
+  | "hollow_echo"
+  | "adaptive_collector"
+  | "frontdesk_replacement";
+export type ExposureStage = 0 | 1 | 2 | 3;
+export type ContainmentAction =
+  | "lockdown"
+  | "uv_light"
+  | "broadcast"
+  | "cleanse"
+  | "iron_gate"
+  | "registry_rewrite";
+
+export type MonsterProfile = {
+  type: MonsterType;
+  startExposure: ExposureStage;
+  revealTriggers: string[];
+  observationTags: string[];
+  correctContainment: ContainmentAction[];
+  wrongContainmentEffect: string;
+  exposeCopy: [string, string, string, string];
+  treatmentHint: string;
+  requiresContainment?: boolean;
+};
 
 export type Resident = {
   id: string;
@@ -61,6 +89,7 @@ export type Visitor = {
   camera: string;
   question: string;
   portrait: "amber" | "blue" | "green" | "red" | "violet" | "gray";
+  monsterProfile?: MonsterProfile;
   specialEvent?: {
     label: string;
     detail: string;
@@ -266,6 +295,182 @@ export const decisionLabels: Record<Decision, string> = {
   wait: "留置等待",
 };
 
+export const monsterTypeLabels: Record<MonsterType, string> = {
+  none: "真人 / 未见异形",
+  failed_mimic: "模仿失败型",
+  parasite_bloom: "寄生增殖型",
+  structure_breaker: "骨架错构型",
+  hollow_echo: "空壳回声型",
+  adaptive_collector: "拼接学习型",
+  frontdesk_replacement: "前台替换型",
+};
+
+export const exposureStageLabels: Record<ExposureStage, string> = {
+  0: "稳定",
+  1: "波动",
+  2: "崩解",
+  3: "暴露",
+};
+
+export const containmentActionLabels: Record<ContainmentAction, string> = {
+  lockdown: "封锁入口",
+  uv_light: "强光照射",
+  broadcast: "广播干扰",
+  cleanse: "净化喷雾",
+  iron_gate: "拉下铁门",
+  registry_rewrite: "登记簿反写",
+};
+
+export const containmentActions: {
+  id: ContainmentAction;
+  icon: string;
+  unlockNight: number;
+  description: string;
+}[] = [
+  { id: "lockdown", icon: "fa-lock", unlockNight: 1, description: "暂时冻结门禁，让身份无法被登记簿承认为住户。" },
+  { id: "uv_light", icon: "fa-lightbulb", unlockNight: 1, description: "照亮倒影、皮肤边缘和空壳缺口。" },
+  { id: "cleanse", icon: "fa-spray-can-sparkles", unlockNight: 1, description: "压制寄生孢子和湿墨污染。" },
+  { id: "broadcast", icon: "fa-tower-broadcast", unlockNight: 3, description: "用楼内广播破坏同步声音和回声伪装。" },
+  { id: "iron_gate", icon: "fa-door-closed", unlockNight: 4, description: "物理阻断肢体错构型和冲撞入口的异常。" },
+  { id: "registry_rewrite", icon: "fa-book-medical", unlockNight: 7, description: "在登记簿上反写禁止第二份同名记录。" },
+];
+
+const monsterBase = "/assets/midnight-registry/monsters";
+
+export const monsterStageImages: Record<Exclude<MonsterType, "none">, Record<ExposureStage, string>> = {
+  failed_mimic: {
+    0: `${monsterBase}/failed_mimic_normal.png`,
+    1: `${monsterBase}/failed_mimic_reveal_1.png`,
+    2: `${monsterBase}/failed_mimic_reveal_2.png`,
+    3: `${monsterBase}/failed_mimic_exposed.png`,
+  },
+  parasite_bloom: {
+    0: `${monsterBase}/parasite_bloom_normal.png`,
+    1: `${monsterBase}/parasite_bloom_reveal_1.png`,
+    2: `${monsterBase}/parasite_bloom_reveal_2.png`,
+    3: `${monsterBase}/parasite_bloom_exposed.png`,
+  },
+  structure_breaker: {
+    0: `${monsterBase}/structure_breaker_normal.png`,
+    1: `${monsterBase}/structure_breaker_reveal_1.png`,
+    2: `${monsterBase}/structure_breaker_reveal_2.png`,
+    3: `${monsterBase}/structure_breaker_exposed.png`,
+  },
+  hollow_echo: {
+    0: `${monsterBase}/hollow_echo_normal.png`,
+    1: `${monsterBase}/hollow_echo_reveal_1.png`,
+    2: `${monsterBase}/hollow_echo_reveal_2.png`,
+    3: `${monsterBase}/hollow_echo_exposed.png`,
+  },
+  adaptive_collector: {
+    0: `${monsterBase}/adaptive_collector_normal.png`,
+    1: `${monsterBase}/adaptive_collector_reveal_1.png`,
+    2: `${monsterBase}/adaptive_collector_reveal_2.png`,
+    3: `${monsterBase}/adaptive_collector_exposed.png`,
+  },
+  frontdesk_replacement: {
+    0: `${monsterBase}/frontdesk_replacement_normal.png`,
+    1: `${monsterBase}/frontdesk_replacement_reveal_1.png`,
+    2: `${monsterBase}/frontdesk_replacement_reveal_2.png`,
+    3: `${monsterBase}/frontdesk_replacement_exposed.png`,
+  },
+};
+
+export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfile> = {
+  failed_mimic: {
+    type: "failed_mimic",
+    startExposure: 0,
+    revealTriggers: ["compare:id", "evidence:id", "tool:question", "save:question"],
+    observationTags: ["笑容停留太久", "眨眼太少", "私人习惯卡壳", "面皮慢半拍复位"],
+    correctContainment: ["lockdown"],
+    wrongContainmentEffect: "放行后会占用低风险住户身份，真实住户的私人习惯先从档案中消失。",
+    exposeCopy: [
+      "它仍像普通来客，只是笑容比人类多停了半秒。",
+      "被指出破绽后，嘴角抽动，像面具重新贴回脸上。",
+      "面皮边缘松开，下面露出第二张未完成的人脸。",
+      "手指重新排列，横向拉开的嘴仍在背诵档案里的句子。",
+    ],
+    treatmentHint: "保存纸面或私人习惯矛盾后，拒绝或封锁入口即可阻断登记。",
+  },
+  parasite_bloom: {
+    type: "parasite_bloom",
+    startExposure: 0,
+    revealTriggers: ["tool:scanner", "save:scanner", "cctv:front", "wait:cctv", "containment:cleanse"],
+    observationTags: ["颈部轻微鼓动", "衣领下有湿痕", "胸口第二呼吸源", "黑色纤维从咳声里抖出"],
+    correctContainment: ["lockdown", "cleanse"],
+    wrongContainmentEffect: "大厅污染值上升，档案纸面会出现湿墨和孢子状斑点。",
+    exposeCopy: [
+      "它的工牌和工单都很整齐，只有呼吸比正常人重。",
+      "扫描光扫过胸口时，热区像第二个肺在开合。",
+      "颈后皮肤裂出细小开口，衣领边缘沾着黑色纤维。",
+      "胸腔像花一样打开，声音从喉咙以外的地方共振。",
+    ],
+    treatmentHint: "先封锁入口，再用净化喷雾或安保处理，避免污染进入大厅。",
+    requiresContainment: true,
+  },
+  structure_breaker: {
+    type: "structure_breaker",
+    startExposure: 0,
+    revealTriggers: ["compare:appearance", "evidence:appearance", "cctv:shadow", "cctv:front", "containment:iron_gate"],
+    observationTags: ["手臂比例过长", "肩膀高低不一", "敲门动作像反折关节", "侧面监控暴露反向膝盖"],
+    correctContainment: ["lockdown", "iron_gate"],
+    wrongContainmentEffect: "门锁稳定度下降，后续案件更容易触发门禁故障。",
+    exposeCopy: [
+      "正面看仍像人，只是站姿像在学习站立。",
+      "它把错误的手藏到身后，肩膀却高低错开。",
+      "走廊侧面拍到反折的膝盖和过长前臂。",
+      "四肢反向展开，手掌裂成抓握玻璃的器官。",
+    ],
+    treatmentHint: "CCTV 或外貌证据命中后，封锁入口或拉下铁门最可靠。",
+  },
+  hollow_echo: {
+    type: "hollow_echo",
+    startExposure: 0,
+    revealTriggers: ["tool:phone", "save:phone", "cctv:shadow", "containment:broadcast", "containment:uv_light"],
+    observationTags: ["声音与电话同步", "挂断后仍复述尾音", "眼睛反光缺失", "嘴里没有喉咙"],
+    correctContainment: ["uv_light", "broadcast"],
+    wrongContainmentEffect: "电话线路出现回声，住户照片会短暂变成空白。",
+    exposeCopy: [
+      "它的声音太干净，像从没有房间回响的线路里出来。",
+      "电话与门外同一句话重叠，门外的人停止眨眼。",
+      "强光下脸部边缘缺失，嘴里只剩黑色空洞。",
+      "身体内部像空壳，回声仍在替它回答问题。",
+    ],
+    treatmentHint: "用电话冲突、强光或广播干扰逼出空壳，再呼叫安保。",
+  },
+  adaptive_collector: {
+    type: "adaptive_collector",
+    startExposure: 0,
+    revealTriggers: ["tool:question", "save:question", "wait:reaction", "evidence:behavior", "containment:lockdown"],
+    observationTags: ["回答过度完美", "多个住户习惯拼在一起", "停顿时长像被复制", "脸部快速切换表情"],
+    correctContainment: ["lockdown", "broadcast"],
+    wrongContainmentEffect: "它会学习本局最常用工具，使后续扫描或电话更容易伪通过。",
+    exposeCopy: [
+      "证件、回答和姿势都过于正确，像没有自然犹豫。",
+      "它同时说出几个住户的私人习惯，顺序却像数据库拼接。",
+      "一只手戴周启明的手套，肩上却有林安娜舞蹈包带痕。",
+      "脸在几名住户之间快速切换，嘴里重复你曾接受过的答案。",
+    ],
+    treatmentHint: "留置诱导并保存多条行为矛盾，再封锁或广播干扰。",
+  },
+  frontdesk_replacement: {
+    type: "frontdesk_replacement",
+    startExposure: 0,
+    revealTriggers: ["cctv:clerk", "evidence:ledger", "containment:registry_rewrite", "containment:uv_light"],
+    observationTags: ["完整工牌", "000 室无效", "当前前台 CCTV 仍拍到你", "影子比人慢半秒"],
+    correctContainment: ["lockdown", "registry_rewrite"],
+    wrongContainmentEffect: "第二份薛夜记录会覆盖当前门岗，真正的你被留在雨中。",
+    exposeCopy: [
+      "它几乎就是另一个薛夜，甚至知道你上一案盖了什么章。",
+      "前台 CCTV 拍到你仍在岗，它的影子却慢半拍才跟上。",
+      "胸口皮肤像登记簿纸页一样开合，浮出你盖过的印章。",
+      "它仍用你的脸说话，但身体内部只剩空壳和拼接组织。",
+    ],
+    treatmentHint: "保存前台自身 CCTV，反写登记簿，再封锁并呼叫安保。",
+    requiresContainment: true,
+  },
+};
+
 export const residents: Resident[] = [
   { id: "lin-anna", name: "Lin Anna", room: "203", job: "Dance Teacher", idCode: "7821-44", eyes: "Brown", hair: "Short black hair, left part", feature: "Mole under left eye", habit: "Returns before 21:00", forbidden: "Never wears red", greeting: "Taps two quick rhythms on the desk" },
   { id: "zhou-qiming", name: "Zhou Qiming", room: "506", job: "Retired Police Officer", idCode: "5060-18", eyes: "Dark brown", hair: "Silver buzz cut", feature: "Black glove on right hand", habit: "Keeps every answer short", forbidden: "Never says he forgot his key", greeting: "Nods once without smiling" },
@@ -294,14 +499,16 @@ export const nights = registryNightPlans.slice(0, playableNightCount).map((night
 }));
 
 export const visitors: Visitor[] = [
-  { id: "d1-lin-real", day: 1, sourceResidentId: "lin-anna", name: "Lin Anna", room: "203", job: "Dance Teacher", idCode: "7821-44", arrival: "20:18", reason: "Home from evening rehearsal", eyes: "Brown", hair: "Short black hair, left part", feature: "Mole under left eye", clothing: "Cream jacket, black dance bag", voice: "Soft, counting under her breath", behavior: "Taps two quick rhythms on the desk", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 3, clues: ["All archive fields match.", "Habit matches the resident note."], phone: "203 answers after four rings: 'Yes, that is me downstairs.'", scanner: "ID 7821-44 is clean.", camera: "Camera confirms the mole is under her left eye.", question: "She refuses the red umbrella and says red ruins her luck.", portrait: "amber" },
-  { id: "d1-lin-fake", day: 1, sourceResidentId: "lin-anna", name: "Lin Anya", room: "203", job: "Dance Teacher", idCode: "7821-44", arrival: "21:36", reason: "Says rehearsal ran late", eyes: "Brown", hair: "Short black hair, right part", feature: "Mole under right eye", clothing: "Red raincoat, no dance bag", voice: "Repeats 'I am expected' twice", behavior: "Knocks in one slow rhythm", badge: "Resident badge intact", expectedAction: "reject", isMirror: true, threat: 15, clues: ["Name is wrong.", "Mole is on the wrong side.", "Lin Anna never wears red."], phone: "203 rings from inside and a second voice whispers along with the person at the door.", scanner: "ID code is valid, but the printed name reads Lin Anya.", camera: "The shadow falls toward the hallway light.", question: "She says red is her favorite performance color.", portrait: "red" },
-  { id: "d1-zhou-real", day: 1, sourceResidentId: "zhou-qiming", name: "Zhou Qiming", room: "506", job: "Retired Police Officer", idCode: "5060-18", arrival: "20:47", reason: "Returning from a card game", eyes: "Dark brown", hair: "Silver buzz cut", feature: "Black glove on right hand", clothing: "Pressed gray coat", voice: "Low, clipped answers", behavior: "Nods once without smiling", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 4, clues: ["Right-hand glove matches.", "Brief answers match the habit note."], phone: "506: 'Let him up.' The line clicks off.", scanner: "ID 5060-18 is clean.", camera: "Camera angle confirms right-hand glove.", question: "Asked about his key, he says only: 'In pocket.'", portrait: "gray" },
-  { id: "d1-zhou-fake", day: 1, sourceResidentId: "zhou-qiming", name: "Zhou Qiming", room: "506", job: "Retired Police Officer", idCode: "5060-18", arrival: "22:05", reason: "Forgot his key upstairs", eyes: "Dark brown", hair: "Silver buzz cut", feature: "Black glove on left hand", clothing: "Gray coat with wet cuffs", voice: "Friendly, long explanations", behavior: "Smiles through every answer", badge: "Resident badge intact", expectedAction: "reject", isMirror: true, threat: 18, clues: ["Glove is on the wrong hand.", "He says he forgot his key.", "His speech is too talkative for Zhou."], phone: "506 answers in Zhou's clipped voice: 'I am inside.'", scanner: "The ID is clean but warmer than the desk lamp.", camera: "The left glove does not move when he taps the glass.", question: "He gives a long story about losing keys, which violates the archive note.", portrait: "red" },
+  { id: "d1-lin-real", day: 1, sourceResidentId: "lin-anna", name: "Lin Anna", room: "203", job: "Dance Teacher", idCode: "7821-44", arrival: "21:42", reason: "Home from evening rehearsal", eyes: "Brown", hair: "Short black hair, left part", feature: "Mole under left eye", clothing: "Cream jacket, black dance bag", voice: "Soft, counting under her breath", behavior: "Taps two quick rhythms on the desk", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 3, clues: ["All archive fields match.", "Habit matches the resident note.", "She warns that smiles lasting too long are unsafe."], phone: "203 answers after four rings: 'Yes, that is me downstairs.'", scanner: "ID 7821-44 is clean.", camera: "Camera confirms the mole is under her left eye.", question: "She refuses the red umbrella and says red ruins her luck.", portrait: "amber" },
+  { id: "d1-lin-fake", day: 1, sourceResidentId: "lin-anna", name: "Lin Anya", room: "203", job: "Dance Teacher", idCode: "7821-44", arrival: "20:08", reason: "Says rehearsal ran late", eyes: "Brown", hair: "Short black hair, right part", feature: "Mole under right eye", clothing: "Red raincoat, no dance bag", voice: "Repeats 'I am expected' twice", behavior: "Knocks in one slow rhythm and keeps smiling after each answer", badge: "Resident badge intact", expectedAction: "reject", isMirror: true, threat: 15, clues: ["Name is wrong.", "Mole is on the wrong side.", "Lin Anna never wears red.", "After refusal, the smile fades half a second late."], phone: "203 rings from inside and a second voice whispers along with the person at the door.", scanner: "ID code is valid, but the printed name reads Lin Anya.", camera: "The shadow falls toward the hallway light.", question: "She says red is her favorite performance color.", portrait: "red", monsterProfile: monsterProfiles.failed_mimic },
+  { id: "d1-zhou-real", day: 1, sourceResidentId: "zhou-qiming", name: "Zhou Qiming", room: "506", job: "Retired Police Officer", idCode: "5060-18", arrival: "21:50", reason: "Returning from a card game", eyes: "Dark brown", hair: "Silver buzz cut", feature: "Black glove on right hand", clothing: "Pressed gray coat", voice: "Low, clipped answers", behavior: "Nods once without smiling", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 4, clues: ["Right-hand glove matches.", "Brief answers match the habit note.", "Room line confirms he is at the desk."], phone: "506: 'Let him up.' The line clicks off.", scanner: "ID 5060-18 is clean.", camera: "Camera angle confirms right-hand glove.", question: "Asked about his key, he says only: 'In pocket.'", portrait: "gray" },
+  { id: "d1-zhou-fake", day: 1, sourceResidentId: "zhou-qiming", name: "Zhou Qiming", room: "506", job: "Retired Police Officer", idCode: "5060-18", arrival: "20:24", reason: "Forgot his key upstairs", eyes: "Dark brown", hair: "Silver buzz cut", feature: "Black glove on left hand", clothing: "Gray coat with wet cuffs", voice: "Friendly, long explanations", behavior: "Smiles through every answer and taps the glass with a loose wrist", badge: "Resident badge intact", expectedAction: "reject", isMirror: true, threat: 18, clues: ["Glove is on the wrong hand.", "He says he forgot his key.", "His speech is too talkative for Zhou.", "CCTV side angle shows the arm is too long."], phone: "506 answers in Zhou's clipped voice: 'I am inside.'", scanner: "The ID is clean but warmer than the desk lamp.", camera: "The left glove does not move when he taps the glass.", question: "He gives a long story about losing keys, which violates the archive note.", portrait: "red", monsterProfile: monsterProfiles.structure_breaker },
   { id: "d1-mina-real", day: 1, sourceResidentId: "mina-park", name: "Mina Park", room: "208", job: "Art Student", idCode: "2087-65", arrival: "21:02", reason: "Back from studio class", eyes: "Green", hair: "Copper bob", feature: "Blue scarf with paint stains", clothing: "Black coat, paint on fingers", voice: "Breathless, apologetic", behavior: "Signs the ledger with a star", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 5, clues: ["Blue scarf and star signature match.", "ID and room match archive."], phone: "208: no answer. Her record says she is usually out at studio class.", scanner: "ID 2087-65 is clean.", camera: "Paint-stained scarf is visible on the south camera.", question: "She says she never removes the scarf outside.", portrait: "green" },
-  { id: "d1-mina-fake", day: 1, sourceResidentId: "mina-park", name: "Mina Park", room: "280", job: "Art Student", idCode: "2087-65", arrival: "21:18", reason: "Wants to retrieve a sketchbook", eyes: "Green", hair: "Copper bob", feature: "No scarf, clean hands", clothing: "Blue scarf folded in pocket", voice: "Too even, no breath", behavior: "Signs the ledger with a circle while the room line repeats her voice", badge: "Resident badge cracked through room number", expectedAction: "security", isMirror: true, threat: 24, clues: ["Room number is wrong.", "The room line repeats the visitor's voice at the same time.", "The hallway camera cannot hold her shadow for three frames."], phone: "208 answers while the person at the glass speaks the same words. A second receiver keeps breathing after both voices stop.", scanner: "ID code is clean, but badge room reads 280.", camera: "Her shadow vanishes for three frames, then returns facing the light.", question: "She knows the star signature but cannot describe the paint on her own scarf.", portrait: "violet" },
+  { id: "d1-mina-fake", day: 1, sourceResidentId: "mina-park", name: "Mina Park", room: "280", job: "Art Student", idCode: "2087-65", arrival: "20:41", reason: "Wants to retrieve a sketchbook", eyes: "Green", hair: "Copper bob", feature: "No scarf, clean hands", clothing: "Blue scarf folded in pocket", voice: "Too even, no breath", behavior: "Signs the ledger with a circle while the room line repeats her voice", badge: "Resident badge cracked through room number", expectedAction: "security", isMirror: true, threat: 24, clues: ["Room number is wrong.", "The room line repeats the visitor's voice at the same time.", "The hallway camera cannot hold her shadow for three frames.", "Her mouth emits a busy tone after the call ends."], phone: "208 answers while the person at the glass speaks the same words. A second receiver keeps breathing after both voices stop.", scanner: "ID code is clean, but badge room reads 280.", camera: "Her shadow vanishes for three frames, then returns facing the light.", question: "She knows the star signature but cannot describe the paint on her own scarf.", portrait: "violet", monsterProfile: monsterProfiles.hollow_echo },
   { id: "d1-guo-real", day: 1, sourceResidentId: "guo-lan", name: "Guo Lan", room: "402", job: "Tailor", idCode: "4025-12", arrival: "22:10", reason: "Returned from a client fitting", eyes: "Black", hair: "Long braid pinned high", feature: "Measuring tape around neck", clothing: "Fitted jacket, narrow sleeves", voice: "Sharp and tired", behavior: "Corrects a crooked collar on the counter mannequin", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 5, clues: ["Tailor habit and narrow sleeves match.", "ID and room match archive."], phone: "402: no answer, but the workshop radio can be heard through the hallway camera.", scanner: "ID 4025-12 is clean.", camera: "Measuring tape and pinned braid match the archive.", question: "She calls the building Silver Moon House, its old name.", portrait: "blue" },
-  { id: "d1-owen-fake", day: 1, sourceResidentId: "owen-xu", name: "Owen Xu", room: "502", job: "Violinist", idCode: "5026-89", arrival: "23:11", reason: "Says room 303 complained about practice", eyes: "Blue", hair: "Dark curls", feature: "Violin case with brass latch", clothing: "Long navy scarf", voice: "Hums after speaking", behavior: "Offers the case to be carried upstairs", badge: "Resident badge intact", expectedAction: "reject", isMirror: true, threat: 17, clues: ["ID code is one digit off.", "Case latch should be silver.", "Owen never lets anyone carry the case."], phone: "502: a violin note plays, then someone says, 'My case is here with me.'", scanner: "ID 5026-89 fails checksum.", camera: "The case latch flashes brass, not silver.", question: "He asks you to carry the case, which Owen never does.", portrait: "violet" },
+  { id: "d1-han-parasite", day: 1, appointment: appointments[0], name: "Han Dong", room: "4F", job: "Maintenance Contractor", idCode: "BSR-443", arrival: "22:18", reason: "Repair fourth-floor electrical box", eyes: "Brown", hair: "Black cap pulled low", feature: "Blue Star patch; collar hides a pulsing mark", clothing: "Tool vest, sealed toolbox, wet collar", voice: "Professional, breath too heavy", behavior: "Names the correct breaker panel but coughs black fibers into his glove", badge: "Contractor pass BSR-443", expectedAction: "security", isMirror: true, threat: 28, clues: ["Work order and pass look correct.", "Scanner detects a second heat source in the chest.", "CCTV catches a small opening behind the neck.", "Containment requires entry lockdown or cleansing spray before security."], phone: "The superintendent confirms the work order, then whispers: 'Do not let the wet one cross the line.'", scanner: "Contractor pass BSR-443 matches, but the body scan flags an impossible warm mass behind the sternum.", camera: "CCTV shows the back of his neck opening and closing under the collar.", question: "He answers the work order perfectly, but coughs out a thread that moves against the air.", portrait: "red", monsterProfile: monsterProfiles.parasite_bloom },
+  { id: "d1-li-real", day: 1, sourceResidentId: "li-mei", name: "Li Mei", room: "302", job: "Florist", idCode: "3029-71", arrival: "22:37", reason: "Returning with wrapped flowers", eyes: "Hazel", hair: "Low bun with loose fringe", feature: "Silver bracelet on left wrist", clothing: "Green rain cape, wrapped lilies", voice: "Warm, refuses the elevator", behavior: "Takes the stairs without being asked and rejects 'Auntie'", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 4, clues: ["Bracelet, stairs habit, and flower bundle match.", "She rejects the wrong nickname.", "No mirror or voice conflict appears."], phone: "302: no answer. The stair camera shows her arriving by stairs.", scanner: "ID 3029-71 is clean.", camera: "Left wrist bracelet catches the stairwell light.", question: "She frowns when called Auntie and corrects you to Ms. Li.", portrait: "green" },
+  { id: "d1-owen-fake", day: 1, sourceResidentId: "owen-xu", name: "Owen Xu", room: "502", job: "Violinist", idCode: "5026-89", arrival: "23:11", reason: "Says room 303 complained about practice", eyes: "Blue", hair: "Dark curls", feature: "Violin case with brass latch", clothing: "Long navy scarf", voice: "Hums after speaking", behavior: "Offers the case to be carried upstairs; the case breathes when challenged", badge: "Resident badge intact", expectedAction: "reject", isMirror: true, threat: 20, clues: ["ID code is one digit off.", "Case latch should be silver.", "Owen never lets anyone carry the case.", "The violin case contains another person's breathing."], phone: "502: a violin note plays, then someone says, 'My case is here with me.'", scanner: "ID 5026-89 fails checksum.", camera: "The case latch flashes brass, not silver.", question: "He asks you to carry the case, which Owen never does.", portrait: "violet", monsterProfile: monsterProfiles.adaptive_collector },
   { id: "d2-han-real", day: 2, appointment: appointments[0], name: "Han Dong", room: "4F", job: "Maintenance Contractor", idCode: "BSR-443", arrival: "20:31", reason: "Repair fourth-floor electrical box", eyes: "Brown", hair: "Black cap", feature: "Blue Star Repair patch", clothing: "Tool vest, sealed toolbox", voice: "Professional and impatient", behavior: "Names the fourth-floor breaker panel", badge: "Contractor pass BSR-443", expectedAction: "allow", isMirror: false, threat: 6, clues: ["Appointment name, company, time, and location match.", "Fourth-floor task is allowed."], phone: "The superintendent line confirms Blue Star Repair at 20:30, then coughs through a burst of old rain static.", scanner: "Contractor pass BSR-443 matches the register.", camera: "Toolbox seal matches the notice photo.", question: "He says there is no seventh floor in the work order.", portrait: "blue" },
   { id: "d2-han-fake", day: 2, appointment: appointments[0], name: "Han Dong", room: "7F", job: "Maintenance Contractor", idCode: "BSR-443", arrival: "23:30", reason: "Repair upper-floor wiring", eyes: "Brown", hair: "Black cap", feature: "Blue Heart Repair patch", clothing: "Empty toolbox, spotless gloves", voice: "Whispers from behind the mask", behavior: "Insists the seventh floor is waiting", badge: "Contractor pass BSR-443", expectedAction: "reject", isMirror: true, threat: 21, clues: ["Company name is wrong.", "Arrival time is wrong.", "There is no seventh floor.", "Blue Star Repair closed twelve years ago, but tonight's list keeps printing its work orders."], phone: "The superintendent line is dead; a wet tapping answers from the receiver and spells Blue Star in pulses.", scanner: "Pass number exists, but the company imprint says Blue Heart Repair and the issuer date is twelve years old.", camera: "The toolbox opens to black cloth instead of tools.", question: "He repeats 'seventh floor' after every question.", portrait: "red" },
   { id: "d2-li-real", day: 2, sourceResidentId: "li-mei", name: "Li Mei", room: "302", job: "Florist", idCode: "3029-71", arrival: "20:52", reason: "Returning with flowers", eyes: "Hazel", hair: "Low bun with loose fringe", feature: "Silver bracelet on left wrist", clothing: "Green rain cape, wrapped lilies", voice: "Warm, refuses the elevator", behavior: "Takes the stairs without being asked", badge: "Resident badge intact", expectedAction: "allow", isMirror: false, threat: 4, clues: ["Bracelet, time, and flower habit match.", "She refuses the elevator."], phone: "302: no answer. The stair camera shows her going up.", scanner: "ID 3029-71 is clean.", camera: "Left wrist bracelet catches the stairwell light.", question: "She frowns when called Auntie and corrects you to Ms. Li.", portrait: "green" },
@@ -324,6 +531,26 @@ export const residentIdByName = new Map(residents.map((resident) => [resident.na
 
 export function getResident(id?: string) {
   return residents.find((resident) => resident.id === id);
+}
+
+function getGeneratedMonsterProfile(
+  nightId: number,
+  encounter: { visitor: string; correctDecision: string; evidence: string[] },
+) {
+  const isThreat = encounter.correctDecision === "reject" || encounter.correctDecision === "security";
+  if (!isThreat) return undefined;
+  if (encounter.visitor.includes("Clerk") || encounter.visitor.includes("Y. Xue") || encounter.evidence.some((item) => item.includes("clerk"))) {
+    return monsterProfiles.frontdesk_replacement;
+  }
+  if (nightId >= 7 && encounter.correctDecision === "security") return monsterProfiles.frontdesk_replacement;
+  if (nightId >= 6) return monsterProfiles.adaptive_collector;
+  if (nightId === 5) {
+    return encounter.evidence.some((item) => /phone|voice|line|blank/i.test(item))
+      ? monsterProfiles.hollow_echo
+      : monsterProfiles.parasite_bloom;
+  }
+  if (nightId === 4) return monsterProfiles.structure_breaker;
+  return encounter.correctDecision === "security" ? monsterProfiles.hollow_echo : monsterProfiles.failed_mimic;
 }
 
 export const generatedVisitors: Visitor[] = registryNightPlans
@@ -400,6 +627,7 @@ export const generatedVisitors: Visitor[] = registryNightPlans
             ? "The answer is plausible but needs a second source."
             : "The habit answer matches.",
         portrait: isThreat ? "red" : isUnclear ? "violet" : "green",
+        monsterProfile: getGeneratedMonsterProfile(night.id, encounter),
         specialEvent,
       };
     }),

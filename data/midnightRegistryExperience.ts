@@ -180,11 +180,10 @@ export const cctvChannels: CctvChannel[] = [
 
 export const tutorialStepsByVisitor: Record<string, TutorialStep[]> = {
   "d1-lin-fake": [
-    { action: "document:identity", objective: "打开她递来的住户证件。", hint: "先看纸面身份。", strongHint: "点击“住户证件”。" },
-    { action: "view:archive", objective: "打开住户档案。", hint: "203 室应该有正式档案。", strongHint: "点击“档案”标签。" },
-    { action: "compare:id", objective: "比较证件姓名与档案姓名。", hint: "选择一项字段进行对照。", strongHint: "点击档案里的“姓名对比”。" },
-    { action: "evidence:id", objective: "把姓名差异盖到证据板上。", hint: "差异还没有进入审批表。", strongHint: "打开登记簿并选择“纸质身份不符”。" },
-    { action: "decision:reject", objective: "证据足够，拒绝进入。", hint: "普通证件不符应拒绝。", strongHint: "点击“拒绝进入”。" },
+    { action: "document:identity", objective: "打开她递来的住户证件。", hint: "只看高亮的证件。", strongHint: "点击唯一发亮的“住户证件”。" },
+    { action: "view:archive", objective: "打开 203 室住户档案。", hint: "现在只需要对照正式档案。", strongHint: "点击唯一发亮的“档案”标签。" },
+    { action: "evidence:id", objective: "发现姓名不一致，保存这条证据。", hint: "证件写林安雅，档案写林安娜。", strongHint: "点击证据链里的“保存姓名冲突证据”。" },
+    { action: "decision:reject", objective: "证据足够，盖下拒绝章。", hint: "姓名不一致不能登记入楼。", strongHint: "点击唯一发亮的“拒绝进入”。" },
   ],
   "d1-zhou-fake": [
     { action: "document:appearance", objective: "打开前台观察记录。", hint: "这次重点看左右特征。", strongHint: "点击“前台观察记录”。" },
@@ -203,6 +202,7 @@ export const tutorialStepsByVisitor: Record<string, TutorialStep[]> = {
 };
 
 export function getRequiredEvidenceCount(visitor: Visitor) {
+  if (visitor.monsterProfile?.requiresContainment) return 3;
   if (visitor.id === "d1-lin-fake" || visitor.id === "d1-zhou-fake") return 1;
   if (visitor.room === "000" || visitor.expectedAction === "security") return 3;
   if (visitor.isMirror || visitor.expectedAction === "wait") return 2;

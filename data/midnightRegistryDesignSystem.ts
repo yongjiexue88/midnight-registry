@@ -33,6 +33,15 @@ export type RegistryCctvAsset = {
   anomaly: string;
 };
 
+export type RegistryMonsterAsset = {
+  id: string;
+  label: string;
+  type: string;
+  stageImages: string[];
+  handling: string[];
+  revealNotes: string[];
+};
+
 export type RegistryAnimationAsset = {
   id: number;
   name: string;
@@ -278,6 +287,13 @@ export const registrySheetAssets: RegistrySheetAsset[] = [
     usage: "Canonical story progression board with all seven nights and encounter density.",
     reviewNotes: ["All seven nights are present, including Night 6 Learning Impostors.", "Shows 8-15 encounter-card density per night.", "Includes ending badges and reusable error-detail cards."],
   },
+  {
+    id: "monster-reveal",
+    title: "Monster reveal stage contact sheet",
+    image: `${registryAssetBase}/monsters/monster-reveal-contact-sheet.png`,
+    usage: "Review sheet for six Borrower monster templates across normal, reveal 1, reveal 2, and exposed stages.",
+    reviewNotes: ["Contact sheet is review-only; gameplay uses clean individual 512 x 768 PNG exports.", "No filename strips, neighboring art, or card borders are present in individual stage files.", "Templates map directly to the exposure meter and containment actions."],
+  },
 ];
 
 export const registryCctvAssets: RegistryCctvAsset[] = [
@@ -328,6 +344,57 @@ export const registryCctvAssets: RegistryCctvAsset[] = [
     label: "Blue Star service van",
     image: `${registryAssetBase}/cctv/blue-star-van.png`,
     anomaly: "Story background for the obsolete repair company returning in the rain.",
+  },
+];
+
+export const registryMonsterAssets: RegistryMonsterAsset[] = [
+  {
+    id: "failed_mimic",
+    label: "Failed Mimic",
+    type: "模仿失败型",
+    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/failed_mimic_${stage}.png`),
+    handling: ["拒绝进入", "封锁入口"],
+    revealNotes: ["Smile lingers too long.", "Private habit answer stalls.", "Face splits into a second unfinished mask."],
+  },
+  {
+    id: "parasite_bloom",
+    label: "Parasite Bloom",
+    type: "寄生增殖型",
+    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/parasite_bloom_${stage}.png`),
+    handling: ["封锁入口", "净化喷雾", "呼叫安保"],
+    revealNotes: ["Second heat source behind sternum.", "Neck aperture opens under collar.", "Chest blooms into a resonating spore cavity."],
+  },
+  {
+    id: "structure_breaker",
+    label: "Structure Breaker",
+    type: "骨架错构型",
+    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/structure_breaker_${stage}.png`),
+    handling: ["拉下铁门", "封锁入口"],
+    revealNotes: ["Wrong-hand clue.", "Side CCTV reveals long arms.", "Limbs reverse against the glass."],
+  },
+  {
+    id: "hollow_echo",
+    label: "Hollow Echo",
+    type: "空壳回声型",
+    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/hollow_echo_${stage}.png`),
+    handling: ["强光照射", "广播干扰", "呼叫安保"],
+    revealNotes: ["Phone and door speak together.", "Eyes do not catch light.", "Mouth opens into a hollow receiver."],
+  },
+  {
+    id: "adaptive_collector",
+    label: "Adaptive Collector",
+    type: "拼接学习型",
+    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/adaptive_collector_${stage}.png`),
+    handling: ["留置诱导", "广播干扰", "封锁入口"],
+    revealNotes: ["Answers are too perfect.", "Multiple residents' habits combine.", "Face cycles through copied expressions."],
+  },
+  {
+    id: "frontdesk_replacement",
+    label: "Frontdesk Replacement",
+    type: "前台替换型",
+    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/frontdesk_replacement_${stage}.png`),
+    handling: ["前台 CCTV 自证", "登记簿反写", "封锁入口", "呼叫安保"],
+    revealNotes: ["Badge and paperwork are almost correct.", "000 room is invalid.", "Chest opens like registry paper covered in old stamps."],
   },
 ];
 
