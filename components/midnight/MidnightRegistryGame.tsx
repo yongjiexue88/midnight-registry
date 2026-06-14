@@ -1,10 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { registryCharacterAssets } from "@/data/midnightRegistryDesignSystem";
 import {
+  cctvChannels,
+  getCctvHotspots,
+  getDecisionEvidenceWarning,
+  getRequiredEvidenceCount,
+  nightExperiences,
+  prepModeCards,
+  prepPerks,
+  tutorialStepsByVisitor,
+  type HintSetting,
+  type PrepPerkId,
+} from "@/data/midnightRegistryExperience";
+import {
+  playMidnightSound,
+  rainAmbienceFile,
+  type MidnightSound,
+} from "@/lib/midnightAudio";
+import {
   chineseAppointments,
-  chineseCctvLabels,
   chineseEntryLogs,
   chineseNights,
   getChineseEntrySignal,
@@ -36,13 +52,12 @@ import {
   visitorTypeLabels,
   decisionLabels,
   residents,
-  visitorsPerNight,
+  endlessVisitorsPerRound,
   nights,
   getResident,
   playableVisitors,
   officeUpgrades,
   residentRelationships,
-  cctvSceneAssets,
 } from "@/data/midnightRegistryData";
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
@@ -68,6 +83,7 @@ function getEntrySignal(visitor: Visitor) {
 function getPhoneLines(visitor: Visitor): PhoneLine[] {
   const visitorType = getVisitorType(visitor);
   const displayVisitor = getChineseVisitor(visitor);
+  const registeredRoom = getResident(visitor.sourceResidentId)?.room ?? visitor.room;
   const primaryLabel =
     visitorType === "emergency"
       ? "医院或雇主线路"
@@ -75,7 +91,7 @@ function getPhoneLines(visitor: Visitor): PhoneLine[] {
         ? "快递调度"
         : visitor.room === "Desk"
           ? "前台预约线路"
-          : `${visitor.room} 室`;
+          : `${registeredRoom} 室`;
 
   const lines: PhoneLine[] = [{ label: primaryLabel, result: displayVisitor.phone }];
 
@@ -355,6 +371,38 @@ function TypewriterText({ text }: { text: string }) {
 
 type ScreenEffect = null | "allow" | "refuse" | "security" | "wait" | "wrong";
 type ResourcePool = Record<ToolName, number>;
+type ToolResult = {
+  source: ToolName | "document" | "cctv";
+  status: "loading" | "pass" | "warning" | "danger";
+  title: string;
+  text: string;
+  evidence: EvidenceKey[];
+  saveAction: string;
+  saved: boolean;
+};
+type CctvFreeze = {
+  hotspotId: string;
+  label: string;
+  text: string;
+  evidence: EvidenceKey[];
+  action: string;
+  status: "pass" | "danger";
+  saved: boolean;
+};
+type Feedback = {
+  decision: Decision;
+  correct: boolean;
+  visitor: Visitor;
+  consequences: string[];
+  deltas: {
+    score: number;
+    safety: number;
+    reputation: number;
+    sanity: number;
+  };
+  missedClues: string[];
+  skippedSteps: string[];
+};
 type HoldReveal = {
   visitorId: string;
   phase: "choosing" | "revealed";
@@ -371,7 +419,7 @@ type NightSettlement = {
 };
 
 const baseResourcesByMode: Record<GameMode, ResourcePool> = {
-  story: { phone: 10, scanner: 6, camera: 10, question: 18 },
+  story: { phone: 8, scanner: 6, camera: 5, question: 18 },
   challenge: { phone: 4, scanner: 3, camera: 4, question: 8 },
   endless: { phone: 6, scanner: 4, camera: 6, question: 12 },
 };
@@ -382,7 +430,7 @@ function makeResidentStatusMap(): Record<string, ResidentStatus> {
 
 function getResourcePool(
   mode: GameMode,
-  perk: "coffee" | "booster" | "override" | "repairkit" | null,
+  perk: PrepPerkId | null,
   upgrades: OfficeUpgradeId[],
 ): ResourcePool {
   const resources = { ...baseResourcesByMode[mode] };
@@ -409,12 +457,13 @@ export function MidnightRegistryGame() {
   const [documentMotionKey, setDocumentMotionKey] = useState(0);
   const [checkedItems, setCheckedItems] = useState<ChecklistKey[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceKey[]>([]);
+  const [verifiedEvidence, setVerifiedEvidence] = useState<string[]>([]);
   const [toolCounts, setToolCounts] = useState<Record<ToolName, number>>({ ...emptyToolCounts });
   const [toolLog, setToolLog] = useState("台灯在低鸣。每一次盖章都在把一个人写进现实。请先核对证件、关系、记忆和今夜规则。");
   const [visitorMood, setVisitorMood] = useState<VisitorMood>("idle");
   const [screenEffect, setScreenEffect] = useState<ScreenEffect>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ decision: Decision; correct: boolean; visitor: Visitor; consequences: string[] } | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [ending, setEnding] = useState<string | null>(null);
   const [nightSettlement, setNightSettlement] = useState<NightSettlement | null>(null);
@@ -427,7 +476,7 @@ export function MidnightRegistryGame() {
   const [gamePhase, setGamePhase] = useState<"prep" | "shift">("prep");
   const [prepPoints, setPrepPoints] = useState(100);
   const [decryptedFiles, setDecryptedFiles] = useState<string[]>([]);
-  const [selectedPerk, setSelectedPerk] = useState<"coffee" | "booster" | "override" | "repairkit" | null>(null);
+  const [selectedPerk, setSelectedPerk] = useState<PrepPerkId | null>(null);
   const [upgradeCredits, setUpgradeCredits] = useState(0);
   const [ownedUpgrades, setOwnedUpgrades] = useState<OfficeUpgradeId[]>([]);
   const [repairTarget, setRepairTarget] = useState<string | null>(null);
@@ -464,6 +513,28 @@ export function MidnightRegistryGame() {
   const [scannerProgress, setScannerProgress] = useState(0);
   const [lockSequence, setLockSequence] = useState("");
   const [lockTargetCode, setLockTargetCode] = useState("4291");
+  const [caseActions, setCaseActions] = useState<string[]>(["arrival", "claim"]);
+  const [idleMs, setIdleMs] = useState(0);
+  const [hintSetting, setHintSetting] = useState<HintSetting>("full");
+  const [documentModalId, setDocumentModalId] = useState<string | null>(null);
+  const [comparisonResult, setComparisonResult] = useState<{
+    action: string;
+    label: string;
+    text: string;
+    evidence: EvidenceKey[];
+    saved: boolean;
+  } | null>(null);
+  const [toolResult, setToolResult] = useState<ToolResult | null>(null);
+  const [cctvFreeze, setCctvFreeze] = useState<CctvFreeze | null>(null);
+  const [decisionWarning, setDecisionWarning] = useState<{
+    decision: Decision;
+    message: string;
+  } | null>(null);
+  const [shiftTransition, setShiftTransition] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [statImpact, setStatImpact] = useState<null | "safety" | "reputation" | "sanity">(null);
+  const [seenNightEvents, setSeenNightEvents] = useState<number[]>([]);
+  const rainAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentNight =
     gameMode === "endless"
@@ -476,11 +547,22 @@ export function MidnightRegistryGame() {
       : chineseNights[dayIndex];
   const dayVisitors = useMemo(() => {
     if (gameMode !== "endless") {
-      return playableVisitors.filter((candidate) => candidate.day === dayIndex + 1);
+      const nightlyVisitors = playableVisitors.filter((candidate) => candidate.day === dayIndex + 1);
+      if (dayIndex !== 0) return nightlyVisitors;
+      const tutorialOrder = ["d1-lin-fake", "d1-zhou-fake", "d1-mina-fake"];
+      return [...nightlyVisitors].sort((left, right) => {
+        const leftIndex = tutorialOrder.indexOf(left.id);
+        const rightIndex = tutorialOrder.indexOf(right.id);
+        if (leftIndex >= 0 || rightIndex >= 0) {
+          return (leftIndex < 0 ? tutorialOrder.length : leftIndex) -
+            (rightIndex < 0 ? tutorialOrder.length : rightIndex);
+        }
+        return 0;
+      });
     }
 
-    return Array.from({ length: visitorsPerNight }, (_, index) => {
-      const source = playableVisitors[(endlessRound * visitorsPerNight + index) % playableVisitors.length];
+    return Array.from({ length: endlessVisitorsPerRound }, (_, index) => {
+      const source = playableVisitors[(endlessRound * endlessVisitorsPerRound + index) % playableVisitors.length];
       return {
         ...source,
         id: `endless-${endlessRound}-${index}-${source.id}`,
@@ -504,6 +586,48 @@ export function MidnightRegistryGame() {
   const queuePressure = dayVisitors.length ? Math.round(((visitorIndex + 1) / dayVisitors.length) * 100) : 0;
   const visitorDocuments = useMemo(() => (visitor ? makeVisitorDocuments(visitor) : []), [visitor]);
   const selectedDocument = visitorDocuments.find((document) => document.id === activeDocument) ?? visitorDocuments[0];
+  const modalDocument = visitorDocuments.find((document) => document.id === documentModalId);
+  const currentNightNumber = gameMode === "endless" ? endlessRound + 1 : dayIndex + 1;
+  const currentExperience = nightExperiences[Math.min(currentNightNumber - 1, nightExperiences.length - 1)];
+  const requiredEvidence = visitor ? getRequiredEvidenceCount(visitor) : 1;
+  const evidenceCount = selectedEvidence.length + verifiedEvidence.length;
+  const tutorialSteps = visitor ? tutorialStepsByVisitor[visitor.id] ?? [] : [];
+  const currentTutorialStep = tutorialSteps.find((step) => !caseActions.includes(step.action));
+  const tutorialActive = gameMode === "story" && dayIndex === 0 && tutorialSteps.length > 0;
+  const activeTutorialStep = tutorialActive ? currentTutorialStep : undefined;
+  const tutorialPhase = activeTutorialStep ? tutorialSteps.indexOf(activeTutorialStep) : 4;
+  const casePhase = tutorialActive
+    ? Math.max(0, Math.min(4, tutorialPhase))
+    : !caseActions.some((action) => action.startsWith("document:"))
+      ? 0
+      : !caseActions.includes("view:archive") && !caseActions.includes("view:notice")
+        ? 1
+        : !caseActions.some((action) => action.startsWith("tool:") || action.startsWith("compare:"))
+          ? 2
+          : evidenceCount < requiredEvidence
+            ? 3
+            : 4;
+  const generalObjectives = [
+    "先打开来客递来的证件或观察记录。",
+    "把纸面信息与住户档案、预约和今夜规则对照。",
+    "使用电话、扫描、监控或提问取得独立来源。",
+    `把关键核验结果保存到证据板（${evidenceCount}/${requiredEvidence}）。`,
+    "证据链已达到建议门槛，可以选择印章。",
+  ];
+  const currentObjective = activeTutorialStep?.objective ?? generalObjectives[casePhase];
+  const hintText = activeTutorialStep
+    ? idleMs >= 30000
+      ? activeTutorialStep.strongHint
+      : activeTutorialStep.hint
+    : idleMs >= 30000
+      ? "仍不确定时，打开登记簿检查证据数量，再使用一个尚未使用的独立来源。"
+      : "优先核对最容易伪造失败的私人习惯、关系和未记录细节。";
+  const unlockedCctvChannels = useMemo(
+    () => cctvChannels.filter((channel) => channel.unlockNight <= currentNightNumber),
+    [currentNightNumber],
+  );
+  const currentCctvChannel =
+    unlockedCctvChannels.find((channel) => channel.channel === cctvChannel) ?? unlockedCctvChannels[0];
   const mostUsedTool = useMemo(() => {
     const entries = Object.entries(totalToolUsage) as [ToolName, number][];
     const maxUsage = Math.max(...entries.map(([, count]) => count));
@@ -511,6 +635,10 @@ export function MidnightRegistryGame() {
     return entries.find(([, count]) => count === maxUsage)?.[0] ?? null;
   }, [totalToolUsage]);
   const learningImpostorActive = (dayIndex >= 5 || (gameMode === "endless" && endlessRound >= 5)) && visitor.isMirror;
+  const cctvLearningTrap = learningImpostorActive && mostUsedTool === "camera";
+  const cctvHotspots = visitor
+    ? getCctvHotspots(currentCctvChannel.channel, visitor, currentNightNumber)
+    : [];
   const storyScenes = [
     "/assets/midnight-registry/cctv/front-gate.png",
     "/assets/midnight-registry/cctv/blue-star-van.png",
@@ -521,6 +649,37 @@ export function MidnightRegistryGame() {
     "/assets/midnight-registry/cctv/clerk-counter.png",
   ];
   const storyScene = storyScenes[(gameMode === "endless" ? endlessRound : dayIndex) % storyScenes.length];
+  const playSound = (sound: MidnightSound, volume?: number) => {
+    playMidnightSound(sound, soundEnabled, volume);
+  };
+  const recordCaseAction = (action: string) => {
+    setCaseActions((actions) => addUnique(actions, action));
+    setIdleMs(0);
+  };
+  const saveToolEvidence = () => {
+    if (!toolResult || toolResult.saved) return;
+    if (toolResult.status === "pass") {
+      setVerifiedEvidence((items) => addUnique(items, toolResult.title));
+    } else {
+      setSelectedEvidence((items) =>
+        toolResult.evidence.reduce((next, evidence) => addUnique(next, evidence), items),
+      );
+    }
+    setToolResult((result) => result ? { ...result, saved: true } : result);
+    recordCaseAction(toolResult.saveAction);
+    playSound("stamp", 0.28);
+  };
+  const triggerStatImpact = (impact: "safety" | "reputation" | "sanity") => {
+    setStatImpact(impact);
+    playSound(
+      impact === "safety"
+        ? "damage-safety"
+        : impact === "reputation"
+          ? "damage-reputation"
+          : "damage-sanity",
+    );
+    window.setTimeout(() => setStatImpact(null), 850);
+  };
 
   // Scanner calibration bar effect
   useEffect(() => {
@@ -543,8 +702,42 @@ export function MidnightRegistryGame() {
   }, [activeRepairTool]);
 
   useEffect(() => {
+    if (!visitor) return;
     setVisitorWaitMs(0);
-  }, [visitor.id]);
+    setCaseActions(["arrival", "claim"]);
+    setIdleMs(0);
+    setDocumentModalId(null);
+    setComparisonResult(null);
+    setToolResult(null);
+    setCctvFreeze(null);
+    setDecisionWarning(null);
+  }, [visitor?.id]);
+
+  useEffect(() => {
+    if (gamePhase !== "shift" || feedback || ending || holdReveal || shiftTransition) return;
+    const timer = window.setInterval(() => setIdleMs((value) => value + 1000), 1000);
+    return () => window.clearInterval(timer);
+  }, [ending, feedback, gamePhase, holdReveal, shiftTransition]);
+
+  useEffect(() => {
+    if (gamePhase !== "shift" || !soundEnabled) {
+      rainAudioRef.current?.pause();
+      return;
+    }
+    const audio = rainAudioRef.current ?? new Audio(rainAmbienceFile);
+    audio.loop = true;
+    audio.volume = 0.12;
+    rainAudioRef.current = audio;
+    void audio.play().catch(() => {
+      // The first direct player interaction will enable ambient playback.
+    });
+    return () => audio.pause();
+  }, [gamePhase, soundEnabled]);
+
+  useEffect(() => {
+    if (unlockedCctvChannels.some((channel) => channel.channel === cctvChannel)) return;
+    setCctvChannel(unlockedCctvChannels[0]?.channel ?? 1);
+  }, [cctvChannel, unlockedCctvChannels]);
 
   useEffect(() => {
     if (gamePhase !== "shift" || feedback || ending || holdReveal) return;
@@ -595,11 +788,23 @@ export function MidnightRegistryGame() {
           waitMs: visitorWaitMs,
         },
         deskView,
+        objective: currentObjective,
+        casePhase,
+        caseActions,
         checkedItems,
         selectedEvidence,
+        verifiedEvidence,
+        evidenceCount,
+        requiredEvidence,
         resources: resourcePool,
         failures,
         stats: { score, safety, reputation, sanity },
+        toolResult: toolResult
+          ? { source: toolResult.source, status: toolResult.status, saved: toolResult.saved }
+          : null,
+        cctvFreeze: cctvFreeze
+          ? { action: cctvFreeze.action, saved: cctvFreeze.saved }
+          : null,
         feedback: feedback ? { decision: feedback.decision, correct: feedback.correct } : null,
         hold: holdReveal?.phase ?? null,
         ending: ending?.split(":")[0] ?? null,
@@ -614,6 +819,11 @@ export function MidnightRegistryGame() {
     };
   }, [
     checkedItems,
+    caseActions,
+    casePhase,
+    cctvFreeze,
+    currentObjective,
+    evidenceCount,
     dayIndex,
     dayVisitors.length,
     deskView,
@@ -626,10 +836,13 @@ export function MidnightRegistryGame() {
     holdReveal,
     reputation,
     resourcePool,
+    requiredEvidence,
     safety,
     sanity,
     score,
     selectedEvidence,
+    toolResult,
+    verifiedEvidence,
     visitor.id,
     visitor.name,
     visitor.room,
@@ -644,13 +857,22 @@ export function MidnightRegistryGame() {
     setDocumentMotionKey((key) => key + 1);
     setCheckedItems([]);
     setSelectedEvidence([]);
+    setVerifiedEvidence([]);
     setToolCounts({ ...emptyToolCounts });
     setToolLog("台灯在低鸣。每一次盖章都在把一个人写进现实。请先核对证件、关系、记忆和今夜规则。");
     setVisitorMood("idle");
+    setCaseActions(["arrival", "claim"]);
+    setIdleMs(0);
+    setDocumentModalId(null);
+    setComparisonResult(null);
+    setToolResult(null);
+    setCctvFreeze(null);
+    setDecisionWarning(null);
   };
 
   const selectDeskView = (view: DeskView) => {
     setDeskView(view);
+    recordCaseAction(`view:${view}`);
     if (view === "archive") {
       setCheckedItems((items) => addUnique(items, "archive"));
     }
@@ -668,6 +890,49 @@ export function MidnightRegistryGame() {
 
   const toggleEvidence = (key: EvidenceKey) => {
     setSelectedEvidence((items) => (items.includes(key) ? items.filter((item) => item !== key) : [...items, key]));
+    recordCaseAction(`evidence:${key}`);
+  };
+
+  const compareDocumentField = (label: string, value: string) => {
+    let evidence: EvidenceKey[] = ["id"];
+    let action = "compare:id";
+    if (["眼睛", "头发", "显著特征", "衣着", "声音", "行为"].includes(label)) {
+      evidence = ["appearance"];
+      action = "compare:appearance";
+    } else if (["到达时间", "时间"].includes(label)) {
+      evidence = ["schedule"];
+      action = "compare:schedule";
+    } else if (["公司", "任务", "目标"].includes(label)) {
+      evidence = ["appointment"];
+      action = "compare:appointment";
+    }
+    const mismatch = visitor.isMirror || visitor.expectedAction === "reject" || visitor.expectedAction === "security";
+    const text = mismatch
+      ? `${label}“${value}”与档案、预约或现场记录存在可疑差异。`
+      : `${label}“${value}”与当前可用的正式记录一致。`;
+    setComparisonResult({
+      action,
+      label,
+      text,
+      evidence,
+      saved: false,
+    });
+    recordCaseAction(action);
+  };
+
+  const saveComparisonEvidence = () => {
+    if (!comparisonResult || comparisonResult.saved) return;
+    if (visitor.isMirror || visitor.expectedAction === "reject" || visitor.expectedAction === "security") {
+      setSelectedEvidence((items) =>
+        comparisonResult.evidence.reduce((next, evidence) => addUnique(next, evidence), items),
+      );
+      comparisonResult.evidence.forEach((evidence) => recordCaseAction(`evidence:${evidence}`));
+    } else {
+      setVerifiedEvidence((items) => addUnique(items, `${comparisonResult.label}与档案一致`));
+      recordCaseAction("evidence:verified");
+    }
+    setComparisonResult((result) => result ? { ...result, saved: true } : result);
+    playSound("stamp", 0.28);
   };
 
   const useTool = (tool: ToolName) => {
@@ -701,44 +966,79 @@ export function MidnightRegistryGame() {
     }
 
     const baseResult = tool === "phone" ? phoneLines[toolCounts.phone]?.result ?? displayVisitor.phone : displayVisitor[tool];
+    const scannerWasLearned =
+      tool === "scanner" && learningImpostorActive && mostUsedTool === "scanner";
     const result =
-      tool === "scanner" && learningImpostorActive && mostUsedTool === "scanner"
-        ? "扫描结果完美无误，时间戳甚至对准了你最习惯信任扫描器的那一刻。"
+      scannerWasLearned
+        ? "扫描结果完美无误：照片、编号、纸张纹理和时间戳全部通过。"
         : baseResult;
     setToolCounts((counts) => ({ ...counts, [tool]: counts[tool] + 1 }));
     setResourcePool((resources) => ({ ...resources, [tool]: Math.max(0, resources[tool] - 1) }));
     setActiveTool(tool);
+    recordCaseAction(`tool:${tool}`);
+    if (tool === "phone") playSound("phone-dial");
     setToolLog(tool === "phone" ? "正在接通线路……" : tool === "scanner" ? "正在扫描证件……" : tool === "camera" ? "正在读取监控……" : "正在记录回答……");
+    setToolResult({
+      source: tool,
+      status: "loading",
+      title: tool === "scanner" ? "扫描光束正在校验" : "工具正在工作",
+      text: "请等待设备完成第二来源核验。",
+      evidence: [],
+      saveAction: `save:${tool}`,
+      saved: false,
+    });
 
     setTimeout(() => {
       setToolLog(tool === "phone" ? `${phoneLines[toolCounts.phone]?.label}: ${result}` : result);
       setActiveTool(null);
+      const suspiciousResult =
+        (visitor.isMirror || visitor.expectedAction === "reject" || visitor.expectedAction === "security")
+        && !scannerWasLearned;
+      setToolResult({
+        source: tool,
+        status: suspiciousResult ? "danger" : "pass",
+        title:
+          tool === "scanner"
+            ? suspiciousResult
+              ? "扫描发现记录矛盾"
+              : "扫描通过"
+            : tool === "phone"
+              ? suspiciousResult
+                ? "线路返回异常"
+                : "线路已接通"
+              : "核验完成",
+        text: result,
+        evidence:
+          tool === "scanner"
+            ? ["id"]
+            : tool === "phone"
+              ? ["phone", "ledger"]
+              : tool === "camera"
+                ? ["appearance"]
+                : ["behavior"],
+        saveAction: `save:${tool}`,
+        saved: false,
+      });
       if (tool === "phone") {
         setVisitorMood("nervous");
         setCheckedItems((items) => addUnique(items, "phone"));
-        if (visitor.isMirror) {
-          setSelectedEvidence((items) => addUnique(addUnique(items, "phone"), "ledger"));
-        }
+        playSound(suspiciousResult ? "phone-dead-air" : "phone-connected");
       }
       if (tool === "scanner") {
         setVisitorMood("waiting");
         setCheckedItems((items) => addUnique(items, "documents"));
-        if (visitor.isMirror) {
-          setSelectedEvidence((items) => addUnique(items, "id"));
-        }
+        playSound(suspiciousResult ? "scanner-error" : "scanner-pass");
       }
       if (tool === "camera") {
         setVisitorMood("waiting");
         setCheckedItems((items) => addUnique(items, "appearance"));
-        if (visitor.isMirror) {
-          setSelectedEvidence((items) => addUnique(items, "appearance"));
-        }
       }
       if (tool === "question") {
         setVisitorMood("suspicious");
       }
       if (visitor.isMirror && (tool === "phone" || tool === "camera")) {
         setSanity((value) => clamp(value - 4));
+        triggerStatImpact("sanity");
       }
     }, 900);
   };
@@ -756,23 +1056,48 @@ export function MidnightRegistryGame() {
 
     setToolCounts((counts) => ({ ...counts, question: counts.question + 1 }));
     setResourcePool((resources) => ({ ...resources, question: Math.max(0, resources.question - 1) }));
+    const questionWasLearned = learningImpostorActive && mostUsedTool === "question";
     const learnedAnswer =
-      learningImpostorActive && mostUsedTool === "question"
+      questionWasLearned
         ? "回答与此前最常出现的版本完全一致，连你曾经接受过的停顿时长都一模一样。"
         : question.answer;
     const learnedSignal =
-      learningImpostorActive && mostUsedTool === "question"
-        ? "没有出现矛盾，因为这个复制体已经针对你最常用的提问流程做好准备。"
+      questionWasLearned
+        ? "回答流畅，停顿、措辞和档案中的习惯样本全部一致。"
         : question.signal;
-    setToolLog(`${question.prompt} ${learnedAnswer} ${learnedSignal}`);
-    setVisitorMood(question.category === "trap" ? "suspicious" : "nervous");
-    setCheckedItems((items) => addUnique(items, "archive"));
-    if ((question.category === "trap" || question.category === "relation") && !(learningImpostorActive && mostUsedTool === "question")) {
-      setSelectedEvidence((items) => addUnique(items, "behavior"));
-    }
-    if (question.category === "situation") {
-      setSelectedEvidence((items) => addUnique(items, "schedule"));
-    }
+    recordCaseAction("tool:question");
+    setActiveTool("question");
+    setVisitorMood("talking");
+    setToolLog(`你问：“${question.prompt}”`);
+    setToolResult({
+      source: "question",
+      status: "loading",
+      title: "来客正在回答",
+      text: question.prompt,
+      evidence: [],
+      saveAction: "save:question",
+      saved: false,
+    });
+    window.setTimeout(() => {
+      const evidence: EvidenceKey[] =
+        question.category === "situation" ? ["schedule"] : ["behavior"];
+      setToolLog(`${question.prompt} ${learnedAnswer} ${learnedSignal}`);
+      setToolResult({
+        source: "question",
+        status: visitor.isMirror && !questionWasLearned ? "danger" : "pass",
+        title:
+          question.category === "trap" && visitor.isMirror && !questionWasLearned
+            ? "陷阱问题命中"
+            : "回答已记录",
+        text: `${learnedAnswer} ${learnedSignal}`,
+        evidence,
+        saveAction: "save:question",
+        saved: false,
+      });
+      setActiveTool(null);
+      setVisitorMood(question.category === "trap" ? "suspicious" : "nervous");
+      setCheckedItems((items) => addUnique(items, "archive"));
+    }, 650);
   };
 
   // Switchboard Wires Mini-game clicks
@@ -842,12 +1167,36 @@ export function MidnightRegistryGame() {
     const allowedMirror = decision === "allow" && visitor.isMirror;
     const blockedValidHuman = !correct && decision !== "allow" && !visitor.isMirror && visitor.expectedAction === "allow";
     const paperworkBonus = Math.min(checkedItems.length, checklistItems.length) * 6;
-    const evidenceBonus = correct ? Math.min(evidenceReasons.length, 4) * 7 : 0;
+    const totalEvidenceCount = evidenceReasons.length + verifiedEvidence.length;
+    const evidenceBonus = correct ? Math.min(totalEvidenceCount, 4) * 7 : 0;
     const rushedPenalty = Math.max(0, 3 - checkedItems.length) * 8;
-    const consequences = getConsequences(visitor, decision, correct, evidenceReasons.length);
+    const consequences = getConsequences(visitor, decision, correct, totalEvidenceCount);
+    const scoreDelta = correct ? 100 + visitor.threat + paperworkBonus + evidenceBonus : -70 - rushedPenalty;
+    const safetyDelta = -(allowedMirror ? 26 : correct ? 0 : 8);
+    const reputationDelta = -(blockedValidHuman ? 18 : decision === "security" && !visitor.isMirror && !correct ? 14 : correct ? 0 : 6);
+    const sanityDelta = -(correct ? Math.floor(visitor.threat / 7) : 14 + Math.floor(visitor.threat / 5));
+    const skippedSteps = checklistItems
+      .filter((item) => !checkedItems.includes(item.key))
+      .map((item) => item.label);
+    const missedClues = getChineseVisitor(visitor).clues
+      .slice(Math.min(totalEvidenceCount, visitor.clues.length))
+      .map((clue) => clue.replace(/[。！？.!?]+$/u, ""));
 
     setVisitorMood(decision === "security" ? "revealed" : visitor.isMirror && !correct ? "revealed" : "idle");
-    setFeedback({ decision, correct, visitor, consequences });
+    setFeedback({
+      decision,
+      correct,
+      visitor,
+      consequences,
+      deltas: {
+        score: scoreDelta,
+        safety: safetyDelta,
+        reputation: reputationDelta,
+        sanity: sanityDelta,
+      },
+      missedClues,
+      skippedSteps,
+    });
     setHistory((entries) => [
       ...entries,
       {
@@ -860,10 +1209,15 @@ export function MidnightRegistryGame() {
         consequence: consequences[0],
       },
     ]);
-    setScore((value) => value + (correct ? 100 + visitor.threat + paperworkBonus + evidenceBonus : -70 - rushedPenalty));
-    setSafety((value) => clamp(value - (allowedMirror ? 26 : correct ? 0 : 8)));
-    setReputation((value) => clamp(value - (blockedValidHuman ? 18 : decision === "security" && !visitor.isMirror && !correct ? 14 : correct ? 0 : 6)));
-    setSanity((value) => clamp(value - (correct ? Math.floor(visitor.threat / 7) : 14 + Math.floor(visitor.threat / 5))));
+    setScore((value) => value + scoreDelta);
+    setSafety((value) => clamp(value + safetyDelta));
+    setReputation((value) => clamp(value + reputationDelta));
+    setSanity((value) => clamp(value + sanityDelta));
+    playSound("stamp", 0.58);
+    if (decision === "security") playSound("alarm", 0.48);
+    if (safetyDelta < 0) triggerStatImpact("safety");
+    else if (reputationDelta < 0) triggerStatImpact("reputation");
+    else if (sanityDelta < 0) triggerStatImpact("sanity");
 
     if (visitor.sourceResidentId) {
       if (allowedMirror) {
@@ -877,8 +1231,29 @@ export function MidnightRegistryGame() {
     setScreenEffect(null);
   };
 
-  const decide = (decision: Decision) => {
+  const decide = (decision: Decision, bypassWarning = false) => {
     if (!visitor || feedback || holdReveal) return;
+    const decisionAction = `decision:${decision}`;
+    if (tutorialActive && currentTutorialStep?.action.startsWith("decision:") && currentTutorialStep.action !== decisionAction) {
+      setToolLog(`值班手册阻止了错误印章：${currentTutorialStep.objective}`);
+      playSound("knock", 0.32);
+      return;
+    }
+    if (
+      currentNightNumber === 7 &&
+      visitor.room === "000" &&
+      decision === "security" &&
+      !caseActions.includes("cctv:clerk")
+    ) {
+      setToolLog("最终安保封锁需要先在前台自身频道保存“当前门岗仍在岗”的画面。");
+      return;
+    }
+    const warning = getDecisionEvidenceWarning(decision, evidenceCount, requiredEvidence);
+    if (warning && !bypassWarning) {
+      setDecisionWarning({ decision, message: warning });
+      playSound("knock", 0.28);
+      return;
+    }
     if (failures.lock) {
       setLockSequence("");
       setLockTargetCode(String(Math.floor(1000 + Math.random() * 9000)));
@@ -887,6 +1262,8 @@ export function MidnightRegistryGame() {
     }
 
     setScreenEffect(decision === "reject" ? "refuse" : decision);
+    setDecisionWarning(null);
+    recordCaseAction(decisionAction);
     setVisitorMood(decision === "allow" ? "leaving" : decision === "security" ? "revealed" : decision === "reject" ? "leaving" : "angry");
 
     if (decision === "wait") {
@@ -1014,6 +1391,31 @@ export function MidnightRegistryGame() {
     }
   };
 
+  const startShift = () => {
+    const firstStoryNight = gameMode === "story" && dayIndex === 0 && history.length === 0;
+    const effectivePerk: PrepPerkId | null = firstStoryNight ? "tutorial" : selectedPerk;
+    setSelectedPerk(effectivePerk);
+    setResourcePool(getResourcePool(gameMode, effectivePerk, ownedUpgrades));
+    setFailures((currentFailures) => ({
+      ...currentFailures,
+      phone: effectivePerk === "repairkit" ? false : currentFailures.phone,
+      scanner: effectivePerk === "booster" ? false : currentFailures.scanner,
+      lock: effectivePerk === "override" ? false : currentFailures.lock,
+    }));
+    if (ownedUpgrades.includes("hotline")) setSanity((value) => clamp(value - 3));
+    if (ownedUpgrades.includes("camera-buffer")) setReputation((value) => clamp(value - 2));
+    if (ownedUpgrades.includes("scanner-capacitor")) setSafety((value) => clamp(value - 2));
+    setShiftTransition(true);
+    playSound("bell", 0.55);
+    window.setTimeout(() => playSound("phone-ring", 0.3), 620);
+    window.setTimeout(() => playSound("knock", 0.42), 1280);
+    window.setTimeout(() => {
+      setGamePhase("shift");
+      setShiftTransition(false);
+      setIdleMs(0);
+    }, 2200);
+  };
+
   const resetGame = () => {
     setGameMode("story");
     setEndlessRound(0);
@@ -1085,30 +1487,48 @@ export function MidnightRegistryGame() {
             <p style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.82rem", margin: "10px auto 0", maxWidth: "620px" }}>{nextNight.briefing}</p>
           </header>
 
+          <article className="registry-prep-mission">
+            <div>
+              <span>你的身份</span>
+              <strong>临时夜班门岗 · 薛夜</strong>
+              <p>你不是在控制一扇门，而是在决定登记簿承认谁真实存在。</p>
+            </div>
+            <div>
+              <span>今夜目标</span>
+              <strong>{currentExperience.objective}</strong>
+              <p>新规则：{currentExperience.newRule}</p>
+            </div>
+            <div className="is-danger">
+              <span>异常预告</span>
+              <strong>{currentExperience.suspense}</strong>
+              <p>每案都可：允许、拒绝、呼叫安保或留置等待。</p>
+            </div>
+          </article>
+
           {history.length === 0 ? (
             <article className="registry-prep-mode" aria-label="游戏模式选择">
               <header>
                 <span>值班合同</span>
-                <h3>选择登记模式</h3>
+                <h3>选择登记模式 · 建议先完成七夜故事</h3>
               </header>
               <div>
-                {[
-                  ["story", "七夜故事", "完整剧情升级、白日修复、设备升级与四种结局。"],
-                  ["challenge", "挑战：停电", "工具次数更少，设备故障更频繁。"],
-                  ["endless", "无尽值班", "每轮八个案例，威胁与压力持续上升。"],
-                ].map(([id, name, description]) => (
+                {prepModeCards.map((mode) => (
                   <button
-                    aria-pressed={gameMode === id}
-                    key={id}
+                    aria-pressed={gameMode === mode.id}
+                    className={mode.recommended ? "is-recommended" : ""}
+                    key={mode.id}
                     onClick={() => {
-                      const nextMode = id as GameMode;
+                      const nextMode = mode.id;
                       setGameMode(nextMode);
-                      setResourcePool(getResourcePool(nextMode, selectedPerk, ownedUpgrades));
+                      setSelectedPerk(null);
+                      setResourcePool(getResourcePool(nextMode, null, ownedUpgrades));
                     }}
                     type="button"
                   >
-                    <strong>{name}</strong>
-                    <span>{description}</span>
+                    <img src={mode.image} alt="" aria-hidden="true" />
+                    {mode.recommended ? <em>推荐</em> : null}
+                    <strong>{mode.name}</strong>
+                    <span>{mode.description}</span>
                   </button>
                 ))}
               </div>
@@ -1132,35 +1552,21 @@ export function MidnightRegistryGame() {
                 <h4 style={{ margin: 0, color: "#eedcb2" }}>选择前台支援</h4>
               </header>
               <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: "12px" }}>本夜只能选择一项设备支援：</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {[
-                  ["coffee", "fa-mug-hot", "稳定咖啡", "换班后额外恢复 30 点稳定度。"],
-                  ["booster", "fa-bolt", "扫描激光增幅器", "本夜证件扫描器不会故障。"],
-                  ["override", "fa-lock-open", "门锁手动旁路", "本夜门锁不会卡死。"],
-                  ["repairkit", "fa-toolbox", "交换机维修包", "本夜电话线路不会中断。"],
-                ].map(([id, icon, name, desc]) => (
+              <div className="registry-prep-perks">
+                {(gameMode === "story" && dayIndex === 0 && history.length === 0
+                  ? prepPerks.filter((perk) => perk.id === "tutorial")
+                  : prepPerks.filter((perk) => perk.id !== "tutorial")
+                ).map((perk) => (
                   <button
-                    key={id}
+                    aria-pressed={selectedPerk === perk.id || perk.id === "tutorial"}
+                    key={perk.id}
                     type="button"
-                    onClick={() => setSelectedPerk(id as Exclude<typeof selectedPerk, null>)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      padding: "8px 12px",
-                      background: selectedPerk === id ? "rgba(237, 194, 112, 0.18)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${selectedPerk === id ? "#edc270" : "rgba(255,255,255,0.1)"}`,
-                      borderRadius: "6px",
-                      color: "white",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
+                    onClick={() => setSelectedPerk(perk.id)}
                   >
-                    <i className={`fa-solid ${icon}`} style={{ color: selectedPerk === id ? "#edc270" : "rgba(255,255,255,0.4)", width: "16px", textAlign: "center" }} />
+                    <img src={perk.image} alt="" aria-hidden="true" />
                     <div>
-                      <strong style={{ display: "block", fontSize: "0.85rem" }}>{name}</strong>
-                      <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)" }}>{desc}</span>
+                      <strong>{perk.name}</strong>
+                      <span>{perk.description}</span>
                     </div>
                   </button>
                 ))}
@@ -1241,19 +1647,8 @@ export function MidnightRegistryGame() {
           <div style={{ textAlign: "center", padding: "10px 0 18px" }}>
             <button
               type="button"
-              onClick={() => {
-                setResourcePool(getResourcePool(gameMode, selectedPerk, ownedUpgrades));
-                setFailures((currentFailures) => ({
-                  ...currentFailures,
-                  phone: selectedPerk === "repairkit" ? false : currentFailures.phone,
-                  scanner: selectedPerk === "booster" ? false : currentFailures.scanner,
-                  lock: selectedPerk === "override" ? false : currentFailures.lock,
-                }));
-                if (ownedUpgrades.includes("hotline")) setSanity((value) => clamp(value - 3));
-                if (ownedUpgrades.includes("camera-buffer")) setReputation((value) => clamp(value - 2));
-                if (ownedUpgrades.includes("scanner-capacitor")) setSafety((value) => clamp(value - 2));
-                setGamePhase("shift");
-              }}
+              className="registry-start-shift"
+              onClick={startShift}
               style={{
                 padding: "12px 32px",
                 background: "radial-gradient(circle, #edc270 0%, #a47b32 100%)",
@@ -1268,7 +1663,9 @@ export function MidnightRegistryGame() {
                 letterSpacing: "1px"
               }}
             >
-              开始夜班
+              <img src="/assets/midnight-registry/prep/shift-bell.png" alt="" aria-hidden="true" />
+              <span>按铃并开始夜班</span>
+              <img src="/assets/midnight-registry/prep/master-switch.png" alt="" aria-hidden="true" />
             </button>
           </div>
         </section>
@@ -1310,7 +1707,9 @@ export function MidnightRegistryGame() {
                 <span>已放入 {repairSources.length}/2 个独立来源</span>
                 <div>
                   {repairSources.map((source) => (
-                    <em key={source}>{source.replace("-", " ")}</em>
+                    <em key={source}>
+                      {source === "old-photo" ? "旧照片" : source === "voice-reel" ? "声音磁带" : "手写习惯便条"}
+                    </em>
                   ))}
                 </div>
               </div>
@@ -1336,6 +1735,16 @@ export function MidnightRegistryGame() {
               >
                 关闭档案
               </button>
+            </div>
+          </div>
+        ) : null}
+        {shiftTransition ? (
+          <div className="registry-shift-transition" role="status" aria-live="polite">
+            <div>
+              <img src="/assets/midnight-registry/prep/master-switch.png" alt="" aria-hidden="true" />
+              <span>20:00 · 宵禁电闸闭合</span>
+              <strong>{currentNight.title}</strong>
+              <p>铃响。电话接线。第一阵敲门声从雨里传来。</p>
             </div>
           </div>
         ) : null}
@@ -1395,9 +1804,69 @@ export function MidnightRegistryGame() {
             <span>得分</span>
             <strong>{score}</strong>
           </div>
+          <button
+            className="registry-sound-toggle"
+            onClick={() => setSoundEnabled((enabled) => !enabled)}
+            type="button"
+          >
+            <i className={`fa-solid ${soundEnabled ? "fa-volume-high" : "fa-volume-xmark"}`} />
+            <span>{soundEnabled ? "声音开" : "声音关"}</span>
+          </button>
         </header>
 
-        <div className="registry-stats">
+        <section className="registry-objective-panel" aria-label="当前案件目标">
+          <div>
+            <span>当前目标</span>
+            <h3>{currentObjective}</h3>
+            <p>{currentExperience.objective}</p>
+          </div>
+          <div className="registry-case-progress" aria-label={`案件进度 ${casePhase + 1}/5`}>
+            {["收件", "对照", "核验", "证据", "裁决"].map((phase, index) => (
+              <span data-state={index < casePhase ? "done" : index === casePhase ? "current" : "future"} key={phase}>
+                <i>{index + 1}</i>
+                <strong>{phase}</strong>
+              </span>
+            ))}
+          </div>
+          <div className="registry-hint-controls">
+            <div>
+              {(["full", "light", "off"] as HintSetting[]).map((setting) => (
+                <button
+                  aria-pressed={hintSetting === setting}
+                  key={setting}
+                  onClick={() => setHintSetting(setting)}
+                  type="button"
+                >
+                  {setting === "full" ? "完整提示" : setting === "light" ? "轻提示" : "关闭"}
+                </button>
+              ))}
+            </div>
+            {hintSetting !== "off" && idleMs >= (hintSetting === "full" ? 15000 : 30000) ? (
+              <p className={idleMs >= 30000 ? "is-strong" : ""}>
+                <i className="fa-solid fa-lightbulb" /> {hintText}
+              </p>
+            ) : (
+              <p>保持核验节奏：每 5–10 秒完成一次资料、工具或证据动作。</p>
+            )}
+          </div>
+        </section>
+
+        {visitorIndex >= Math.floor(dayVisitors.length / 2) && !seenNightEvents.includes(currentNightNumber) ? (
+          <aside className="registry-mid-event">
+            <div>
+              <span>夜半事件</span>
+              <strong>{currentExperience.midEvent}</strong>
+            </div>
+            <button
+              onClick={() => setSeenNightEvents((nightsSeen) => addUnique(nightsSeen, currentNightNumber))}
+              type="button"
+            >
+              记入异常日志
+            </button>
+          </aside>
+        ) : null}
+
+        <div className="registry-stats" data-impact={statImpact ?? "none"}>
           <StatMeter label="安全" value={safety} tone="safe" />
           <StatMeter label="声誉" value={reputation} tone="trust" />
           <StatMeter label="稳定度" value={sanity} tone="mind" />
@@ -1501,8 +1970,10 @@ export function MidnightRegistryGame() {
                         key={document.id}
                         onClick={() => {
                           setActiveDocument(document.id);
+                          setDocumentModalId(document.id);
                           setDocumentMotionKey((key) => key + 1);
                           setCheckedItems((items) => addUnique(items, "documents"));
+                          recordCaseAction(`document:${document.id}`);
                         }}
                         type="button"
                       >
@@ -1547,6 +2018,18 @@ export function MidnightRegistryGame() {
                         <div><dt>禁忌</dt><dd>{isCorrupted ? "【档案污染：字段损坏】" : displayResident?.forbidden}</dd></div>
                         <div><dt>问候</dt><dd>{displayResident?.greeting}</dd></div>
                       </dl>
+                      <div className="registry-archive-compare">
+                        <strong>快速字段对照</strong>
+                        <button onClick={() => compareDocumentField("姓名", displayVisitor.name)} type="button">
+                          姓名对比
+                        </button>
+                        <button onClick={() => compareDocumentField("显著特征", displayVisitor.feature)} type="button">
+                          外貌对比
+                        </button>
+                        <button onClick={() => compareDocumentField("到达时间", visitor.arrival)} type="button">
+                          时间对比
+                        </button>
+                      </div>
                       <div className={`registry-relationship-network ${isCorrupted ? "is-corrupted" : ""}`}>
                         <strong>住户关系交叉核验</strong>
                         {(residentRelationships[resident.id] ?? []).map((relationship) => {
@@ -1645,7 +2128,19 @@ export function MidnightRegistryGame() {
                       ))}
                     </div>
                     <div className="registry-evidence-board">
-                      <strong>证据理由</strong>
+                      <header>
+                        <strong>证据理由</strong>
+                        <span data-complete={evidenceCount >= requiredEvidence}>
+                          完整度 {evidenceCount}/{requiredEvidence}
+                        </span>
+                      </header>
+                      <p>
+                        {evidenceCount >= requiredEvidence
+                          ? "证据链达到建议门槛。仍需确认最终印章与证据方向一致。"
+                          : visitor.expectedAction === "security"
+                            ? "安保级裁决需要更强证据链，建议保存电话与监控结果。"
+                            : "至少再保存一条独立来源，避免草率登记。"}
+                      </p>
                       <div>
                         {evidenceOptions.map((option) => (
                           <button
@@ -1660,6 +2155,15 @@ export function MidnightRegistryGame() {
                           </button>
                         ))}
                       </div>
+                      {verifiedEvidence.length > 0 ? (
+                        <div className="registry-positive-evidence">
+                          {verifiedEvidence.map((evidence) => (
+                            <span key={evidence}>
+                              <i className="fa-solid fa-circle-check" /> {evidence}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </article>
                 </div>
@@ -1667,138 +2171,126 @@ export function MidnightRegistryGame() {
 
               {/* CCTV Monitor Sub-Panel */}
               {deskView === "cctv" ? (
-                <article className="registry-paper registry-paper--cctv-board" style={{ display: "block" }}>
+                <article className="registry-paper registry-paper--cctv-board">
                   <header>
                     <span>监控画面</span>
-                    <h4>大厅监控终端（频道 {cctvChannel}）</h4>
+                    <h4>大厅监控终端（频道 {currentCctvChannel.channel}）</h4>
                   </header>
-                  <div style={{ display: "flex", gap: "12px", padding: "12px 0" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "160px" }}>
-                      {cctvSceneAssets.map((scene) => (
+                  <div className="registry-cctv-console">
+                    <div className="registry-cctv-channels">
+                      {cctvChannels.map((scene) => {
+                        const locked = scene.unlockNight > currentNightNumber;
+                        return (
                         <button
-                          disabled={resourcePool.camera <= 0 && cctvChannel !== scene.channel}
+                          disabled={locked}
                           key={scene.channel}
                           type="button"
                           onClick={() => {
                             if (cctvChannel === scene.channel) return;
-                            if (resourcePool.camera <= 0) {
-                              setToolLog("本班次的监控复核次数已经用尽。");
-                              return;
-                            }
                             setCctvChannel(scene.channel);
-                            setResourcePool((resources) => ({ ...resources, camera: Math.max(0, resources.camera - 1) }));
-                            setTotalToolUsage((usage) => ({ ...usage, camera: usage.camera + 1 }));
-                            setCheckedItems((items) => addUnique(items, "appearance"));
-                            const isCctvTrap = learningImpostorActive && mostUsedTool === "camera";
-                            const isCctvAnomaly = visitor.isMirror && !isCctvTrap && (
-                              scene.channel === 2 ||
-                              (scene.channel === 3 && (visitor.name === "Owen Xu" || visitor.name === "Han Dong")) ||
-                              (scene.channel === 4 && (visitor.name === "Li Mei" || visitor.name === "Ke Ren"))
-                            );
-                            if (isCctvAnomaly) {
-                              setSelectedEvidence((items) => addUnique(items, "appearance"));
-                            }
-                          }}
-                          style={{
-                            padding: "8px",
-                            background: cctvChannel === scene.channel ? "rgba(34, 201, 214, 0.15)" : "rgba(255,255,255,0.03)",
-                            border: `1px solid ${cctvChannel === scene.channel ? "#22c9d6" : "rgba(255,255,255,0.1)"}`,
-                            borderRadius: "4px",
-                            color: "white",
-                            fontSize: "0.75rem",
-                            textAlign: "left",
-                            cursor: "pointer"
+                            setCctvFreeze(null);
+                            setToolLog(`已切换到频道 ${scene.channel}：${scene.purpose}`);
+                            recordCaseAction("tool:cctv");
                           }}
                         >
-                          <i className={`fa-solid ${scene.channel === 1 ? "fa-user" : scene.channel === 2 ? "fa-circle-half-stroke" : scene.channel === 3 ? "fa-box-open" : "fa-elevator"}`} style={{ marginRight: "6px", color: cctvChannel === scene.channel ? "#22c9d6" : "rgba(255,255,255,0.4)" }} />
-                          <span>频道 {scene.channel}：{chineseCctvLabels[scene.channel - 1]}</span>
+                          <i className={`fa-solid ${locked ? "fa-lock" : scene.icon}`} />
+                          <span>频道 {scene.channel}：{scene.label}</span>
+                          <small>{locked ? `第 ${scene.unlockNight} 夜解锁` : scene.purpose}</small>
                         </button>
-                      ))}
+                      )})}
                     </div>
 
-                    <div
-                      style={{
-                        flex: 1,
-                        background: "#050b0f",
-                        border: "3px solid #1a2f3a",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        minHeight: "180px",
-                        position: "relative",
-                        overflow: "hidden"
-                      }}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          background: "linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))",
-                          backgroundSize: "100% 4px, 6px 100%",
-                          pointerEvents: "none"
-                        }}
-                      />
-                      <div style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#22c9d6", display: "flex", justifyContent: "space-between", marginBottom: "12px", borderBottom: "1px solid rgba(34, 201, 214, 0.3)", paddingBottom: "4px" }}>
-                        <span>监控频道：{cctvChannel}</span>
-                        <span>实时画面 / 第 {dayIndex + 1} 夜</span>
+                    <div className={`registry-cctv-monitor ${cctvFreeze ? "is-frozen" : ""}`}>
+                      <div className="registry-cctv-status">
+                        <span>监控频道：{currentCctvChannel.channel}</span>
+                        <span>{cctvFreeze ? "冻结帧 / 可保存" : `实时画面 / 第 ${currentNightNumber} 夜`}</span>
                       </div>
-
-                      <img
-                        className="registry-cctv-feed"
-                        key={`${visitor.id}-${cctvChannel}`}
-                        src={cctvSceneAssets[cctvChannel - 1].image}
-                        alt={`${chineseCctvLabels[cctvChannel - 1]}监控画面`}
-                      />
-
-                      <p style={{ margin: 0, color: "#9cd6db", fontSize: "0.85rem", lineHeight: "1.4", minHeight: "100px" }}>
-                        {(() => {
-                          const isCctvTrap = learningImpostorActive && mostUsedTool === "camera";
-
-                          if (cctvChannel === 1) {
-                            return isCctvTrap
-                              ? `正门画面显示：${displayVisitor.name}。所有特征都与档案照片一致，没有可见异常。`
-                              : `正门画面显示：${displayVisitor.name}。眼睛：${displayVisitor.eyes}；头发：${displayVisitor.hair}；显著特征：${displayVisitor.feature}。`;
-                          }
-                          if (cctvChannel === 2) {
-                            if (visitor.isMirror) {
-                              return isCctvTrap
-                                ? "走廊监控显示来客站立不动，影子方向看似正常。"
-                                : "走廊监控显示：影子直接朝向光源。警告：该角度违反物理规律。";
-                            }
-                            return "走廊监控显示：影子自然投向楼梯间。";
-                          }
-                          if (cctvChannel === 3) {
-                            if (visitor.name === "Owen Xu" && visitor.isMirror) {
-                              return isCctvTrap
-                                ? "柜面监控拍到小提琴盒，搭扣细节看似正常。"
-                                : "柜面监控拍到小提琴盒，搭扣为黄铜色，与档案的银色记录冲突。";
-                            }
-                            if (visitor.name === "Sun Hao") {
-                              return "柜面监控拍到一个油纸包裹的小包子。";
-                            }
-                            if (visitor.name === "Han Dong" && visitor.isMirror) {
-                              return isCctvTrap
-                                ? "柜面监控拍到一个外观正常的维修工具箱。"
-                                : "柜面监控显示：工具箱微微打开，里面完全是空的。";
-                            }
-                            if (visitor.name === "Zhao Jun") {
-                              return "柜面监控显示：皮质文件夹平放在柜台上。";
-                            }
-                            return "柜面监控显示：证件贴在玻璃上，来客姿势稳定。";
-                          }
-                          if (cctvChannel === 4) {
-                            if (visitor.name === "Li Mei" && visitor.isMirror) {
-                              return isCctvTrap
-                                ? "电梯厅显示电梯已经锁定。"
-                                : "电梯呼叫灯正在闪烁，但李梅从不使用电梯。";
-                            }
-                            if (visitor.name === "Ke Ren") {
-                              return "电梯厅信号剧烈闪烁，画面连续三帧失去同步。";
-                            }
-                            return "电梯为空，停在一楼。";
-                          }
-                          return "画面加载中……";
-                        })()}
-                      </p>
+                      <div className="registry-cctv-frame">
+                        <img
+                          className="registry-cctv-feed"
+                          key={`${visitor.id}-${currentCctvChannel.channel}`}
+                          src={currentCctvChannel.image}
+                          alt={`${currentCctvChannel.label}监控画面`}
+                        />
+                        {cctvHotspots.map((hotspot) => (
+                          <button
+                            aria-label={`冻结热点：${hotspot.label}`}
+                            className="registry-cctv-hotspot"
+                            key={hotspot.id}
+                            onClick={() => {
+                              if (resourcePool.camera <= 0) {
+                                setToolLog("监控帧缓存已耗尽，无法冻结新的证据画面。");
+                                return;
+                              }
+                              if (cctvFreeze?.hotspotId === hotspot.id) return;
+                              const freezeResult = cctvLearningTrap
+                                ? {
+                                    ...hotspot,
+                                    text: "画面与档案完全一致。影子、步态和时间码均未见异常。",
+                                    evidence: [] as EvidenceKey[],
+                                    action: "cctv:clear",
+                                    status: "pass" as const,
+                                  }
+                                : {
+                                    ...hotspot,
+                                    status: (
+                                      visitor.isMirror
+                                      || visitor.expectedAction === "reject"
+                                      || visitor.expectedAction === "security"
+                                        ? "danger"
+                                        : "pass"
+                                    ) as "pass" | "danger",
+                                  };
+                              setResourcePool((resources) => ({ ...resources, camera: Math.max(0, resources.camera - 1) }));
+                              setToolCounts((counts) => ({ ...counts, camera: counts.camera + 1 }));
+                              setTotalToolUsage((usage) => ({ ...usage, camera: usage.camera + 1 }));
+                              setCheckedItems((items) => addUnique(items, "appearance"));
+                              setCctvFreeze({ ...freezeResult, hotspotId: hotspot.id, saved: false });
+                              setToolLog(freezeResult.text);
+                              recordCaseAction("tool:cctv");
+                              recordCaseAction(freezeResult.action);
+                              playSound("cctv-freeze");
+                              if (visitor.isMirror && !cctvLearningTrap) {
+                                setSanity((value) => clamp(value - 3));
+                                triggerStatImpact("sanity");
+                              }
+                            }}
+                            style={{
+                              left: `${hotspot.x}%`,
+                              top: `${hotspot.y}%`,
+                              width: `${hotspot.width}%`,
+                              height: `${hotspot.height}%`,
+                            }}
+                            type="button"
+                          >
+                            <span>{hotspot.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="registry-cctv-result">
+                        <p>{cctvFreeze?.text ?? `${currentCctvChannel.purpose} 点击画面中的虚线区域冻结可疑帧。`}</p>
+                        {cctvFreeze ? (
+                          <button
+                            disabled={cctvFreeze.saved}
+                            onClick={() => {
+                              if (cctvFreeze.status === "danger") {
+                                setSelectedEvidence((items) =>
+                                  cctvFreeze.evidence.reduce((next, evidence) => addUnique(next, evidence), items),
+                                );
+                              } else {
+                                setVerifiedEvidence((items) => addUnique(items, `监控通过：${cctvFreeze.label}`));
+                              }
+                              setCctvFreeze((freeze) => freeze ? { ...freeze, saved: true } : freeze);
+                              recordCaseAction("save:cctv");
+                              playSound("stamp", 0.3);
+                            }}
+                            type="button"
+                          >
+                            <i className={`fa-solid ${cctvFreeze.saved ? "fa-circle-check" : "fa-camera"}`} />
+                            {cctvFreeze.saved ? "截图已进入证据板" : "保存截图证据"}
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -1813,7 +2305,7 @@ export function MidnightRegistryGame() {
                   </header>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px 0" }}>
                     {[
-                      { id: "room", label: `${visitor.room} 室线路`, desc: "直接拨入住户房间。" },
+                      { id: "room", label: `${resident?.room ?? visitor.room} 室线路`, desc: "按正式档案拨入住户房间。" },
                       { id: "management", label: "物业办公室", desc: "确认工单或通知授权。" },
                       { id: "security", label: "安保岗亭", desc: "向楼内安保核实异常。" },
                       { id: "neighbor", label: "相邻住户", desc: "交叉核对邻居观察。" }
@@ -1854,17 +2346,49 @@ export function MidnightRegistryGame() {
                             setTotalToolUsage((usage) => ({ ...usage, phone: usage.phone + 1 }));
                             setActiveTool("phone");
                             setToolLog("正在建立交换机接线……");
+                            setToolResult({
+                              source: "phone",
+                              status: "loading",
+                              title: "拨号中",
+                              text: `${line.label}线路正在振铃。`,
+                              evidence: [],
+                              saveAction: "save:phone",
+                              saved: false,
+                            });
+                            recordCaseAction("tool:phone");
+                            playSound("phone-dial");
 
                             setTimeout(() => {
                               setToolLog(`${line.label}: ${resultText}`);
                               setActiveTool(null);
                               setVisitorMood("nervous");
                               setCheckedItems((items) => addUnique(items, "phone"));
-                              if (visitor.isMirror) {
-                                setSelectedEvidence((items) => addUnique(addUnique(items, "phone"), "ledger"));
-                              }
-                              if (visitor.isMirror) {
+                              const lineUnavailable = /无人|占线|无应答|dead|busy/i.test(resultText);
+                              const falseConfirmation = isPhoneTrap && line.id === "room";
+                              const status =
+                                visitor.isMirror && !falseConfirmation
+                                  ? "danger"
+                                  : lineUnavailable
+                                    ? "warning"
+                                    : "pass";
+                              setToolResult({
+                                source: "phone",
+                                status,
+                                title:
+                                  status === "danger"
+                                    ? "重复声音 / 身份冲突"
+                                    : status === "warning"
+                                      ? "线路未确认"
+                                      : "通话已接通",
+                                text: `${line.label}: ${resultText}`,
+                                evidence: status === "danger" ? ["phone", "ledger"] : ["phone"],
+                                saveAction: "save:phone",
+                                saved: false,
+                              });
+                              playSound(status === "pass" ? "phone-connected" : "phone-dead-air");
+                              if (visitor.isMirror && !falseConfirmation) {
                                 setSanity((value) => clamp(value - 4));
+                                triggerStatImpact("sanity");
                               }
                             }, 1200);
                           }}
@@ -1881,6 +2405,19 @@ export function MidnightRegistryGame() {
                       );
                     })}
                   </div>
+                  {toolResult?.source === "phone" ? (
+                    <div className="registry-tool-result" data-status={toolResult.status}>
+                      <span>{toolResult.status === "loading" ? "交换机状态" : "线路结果"}</span>
+                      <strong>{toolResult.title}</strong>
+                      <p>{toolResult.text}</p>
+                      {toolResult.status !== "loading" ? (
+                        <button disabled={toolResult.saved} onClick={saveToolEvidence} type="button">
+                          <i className={`fa-solid ${toolResult.saved ? "fa-circle-check" : "fa-thumbtack"}`} />
+                          {toolResult.saved ? "电话结果已保存" : "保存为证据"}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </article>
               ) : null}
             </div>
@@ -1952,7 +2489,8 @@ export function MidnightRegistryGame() {
                   setActiveRepairTool("camera");
                 } else {
                   setDeskView("cctv");
-                  setToolLog("监控终端已载入，请选择 1-4 号频道核对不同角度。");
+                  setToolLog(`监控终端已载入，本夜可用频道：${unlockedCctvChannels.map((channel) => channel.channel).join("、")}。`);
+                  recordCaseAction("tool:cctv");
                 }
               }}
             >
@@ -1962,7 +2500,19 @@ export function MidnightRegistryGame() {
           </div>
           <div className="registry-tool-log">
             <TypewriterText text={toolLog} />
-            <span>已核对 {checkedItems.length}/{checklistItems.length} 项来源 / 已标记 {selectedEvidence.length} 条证据</span>
+            <span>已核对 {checkedItems.length}/{checklistItems.length} 项来源 / 证据完整度 {evidenceCount}/{requiredEvidence}</span>
+            {toolResult && toolResult.source !== "phone" ? (
+              <div className="registry-tool-result" data-status={toolResult.status}>
+                <strong>{toolResult.title}</strong>
+                <p>{toolResult.text}</p>
+                {toolResult.status !== "loading" ? (
+                  <button disabled={toolResult.saved} onClick={saveToolEvidence} type="button">
+                    <i className={`fa-solid ${toolResult.saved ? "fa-circle-check" : "fa-thumbtack"}`} />
+                    {toolResult.saved ? "结果已保存到证据板" : "保存为证据"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {/* V2 Redesigned Question Index Cards */}
@@ -2029,7 +2579,7 @@ export function MidnightRegistryGame() {
 
         <footer className="registry-decisions">
           {/* Clerk Duplicate special climax Hidden Ending trigger */}
-          {visitor.room === "000" && sanity >= 60 && safety >= 75 && reputation >= 75 && selectedEvidence.length >= 3 && (
+          {visitor.room === "000" && sanity >= 60 && safety >= 75 && reputation >= 75 && evidenceCount >= 3 && (
             <button
               className="registry-decision"
               style={{
@@ -2058,19 +2608,19 @@ export function MidnightRegistryGame() {
             </button>
           )}
 
-          <button className="registry-decision registry-decision--allow" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("allow")}>
+          <button className="registry-decision registry-decision--allow" disabled={screenEffect !== null || feedback !== null || holdReveal !== null || (tutorialActive && currentTutorialStep?.action !== "decision:allow")} type="button" onClick={() => decide("allow")}>
             <img src="/assets/midnight-registry/props/approve-stamp.png" alt="" aria-hidden="true" />
             <span>{failures.lock ? "⚠️ 门锁卡死" : decisionLabels.allow}</span>
           </button>
-          <button className="registry-decision registry-decision--reject" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("reject")}>
+          <button className="registry-decision registry-decision--reject" disabled={screenEffect !== null || feedback !== null || holdReveal !== null || (tutorialActive && currentTutorialStep?.action !== "decision:reject")} type="button" onClick={() => decide("reject")}>
             <img src="/assets/midnight-registry/props/deny-stamp.png" alt="" aria-hidden="true" />
             <span>{failures.lock ? "⚠️ 门锁卡死" : decisionLabels.reject}</span>
           </button>
-          <button className="registry-decision registry-decision--security" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("security")}>
+          <button className="registry-decision registry-decision--security" disabled={screenEffect !== null || feedback !== null || holdReveal !== null || (tutorialActive && currentTutorialStep?.action !== "decision:security")} type="button" onClick={() => decide("security")}>
             <img src="/assets/midnight-registry/props/security-call-stamp.png" alt="" aria-hidden="true" />
             <span>{failures.lock ? "⚠️ 门锁卡死" : decisionLabels.security}</span>
           </button>
-          <button className="registry-decision registry-decision--wait" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("wait")}>
+          <button className="registry-decision registry-decision--wait" disabled={screenEffect !== null || feedback !== null || holdReveal !== null || (tutorialActive && currentTutorialStep?.action !== "decision:wait")} type="button" onClick={() => decide("wait")}>
             <img src="/assets/midnight-registry/props/wait-token.png" alt="" aria-hidden="true" />
             <span>{failures.lock ? "⚠️ 门锁卡死" : decisionLabels.wait}</span>
           </button>
@@ -2092,6 +2642,56 @@ export function MidnightRegistryGame() {
           )}
         </div>
       </section>
+
+      {modalDocument ? (
+        <div className="registry-modal registry-document-modal" role="dialog" aria-modal="true" aria-labelledby="registry-document-title">
+          <div className="registry-modal__card">
+            <span>纸面核验</span>
+            <h2 id="registry-document-title">{modalDocument.title}</h2>
+            <p>点击字段与档案、预约或现场记录进行对照。发现差异后，必须主动盖入证据板。</p>
+            <div className="registry-document-fields">
+              {modalDocument.rows.map(([label, value]) => (
+                <button key={`${modalDocument.id}-${label}`} onClick={() => compareDocumentField(label, value)} type="button">
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                  <i className="fa-solid fa-code-compare" />
+                </button>
+              ))}
+            </div>
+            {comparisonResult ? (
+              <div className="registry-comparison-result">
+                <span>对照结果 · {comparisonResult.label}</span>
+                <p>{comparisonResult.text}</p>
+                <button disabled={comparisonResult.saved} onClick={saveComparisonEvidence} type="button">
+                  <i className={`fa-solid ${comparisonResult.saved ? "fa-circle-check" : "fa-stamp"}`} />
+                  {comparisonResult.saved ? "已写入证据板" : "盖章到证据板"}
+                </button>
+              </div>
+            ) : null}
+            <button className="registry-modal__secondary" onClick={() => setDocumentModalId(null)} type="button">
+              合上文件
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {decisionWarning ? (
+        <div className="registry-modal registry-warning-modal" role="dialog" aria-modal="true" aria-labelledby="registry-warning-title">
+          <div className="registry-modal__card">
+            <span>证据链警告</span>
+            <h2 id="registry-warning-title">登记簿拒绝接受草率印章</h2>
+            <p>{decisionWarning.message}</p>
+            <div className="registry-warning-actions">
+              <button onClick={() => setDecisionWarning(null)} type="button">
+                返回继续调查
+              </button>
+              <button className="is-danger" onClick={() => decide(decisionWarning.decision, true)} type="button">
+                仍然盖章：{decisionLabels[decisionWarning.decision]}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {holdReveal ? (
         <div className="registry-modal registry-hold-modal" role="dialog" aria-modal="true" aria-labelledby="registry-hold-title">
@@ -2166,6 +2766,7 @@ export function MidnightRegistryGame() {
               <strong>升级额度 +{nightSettlement.credits}</strong>
               <strong>稳定度 {sanity}</strong>
             </div>
+            <p className="registry-cliffhanger">{currentExperience.cliffhanger}</p>
             <p>登记簿的墨迹正在干。下一批记录到来前，你只有一个白日准备窗口。</p>
             <button onClick={continueAfterSettlement} type="button">
               <i className="fa-solid fa-sun" />
@@ -2368,8 +2969,9 @@ export function MidnightRegistryGame() {
 
       {feedback ? (
         <div className="registry-modal" role="dialog" aria-modal="true" aria-labelledby="registry-feedback-title">
-          <div className="registry-modal__card">
+          <div className={`registry-modal__card registry-result-card is-${feedback.correct ? "correct" : "wrong"}`}>
             <span>{feedback.correct ? "裁决正确" : "裁决错误"}</span>
+            <div className="registry-result-stamp">{feedback.correct ? "记录成立" : "错误登记"}</div>
             <h2 id="registry-feedback-title">
               {feedback.decision === "allow"
                 ? "大门已开启"
@@ -2406,17 +3008,42 @@ export function MidnightRegistryGame() {
               <section>
                 <strong>已标记理由</strong>
                 <ul>
-                  {selectedEvidence.length === 0 ? (
-                    <li>没有标记任何证据理由。</li>
+                  {selectedEvidence.length === 0 && verifiedEvidence.length === 0 ? (
+                    <li>没有保存任何核验结果。</li>
                   ) : (
-                    selectedEvidence.map((key) => {
-                      const evidence = evidenceOptions.find((option) => option.key === key);
-                      return <li key={key}>{evidence?.label ?? key}</li>;
-                    })
+                    <>
+                      {selectedEvidence.map((key) => {
+                        const evidence = evidenceOptions.find((option) => option.key === key);
+                        return <li key={key}>{evidence?.label ?? key}</li>;
+                      })}
+                      {verifiedEvidence.map((evidence) => (
+                        <li key={evidence}>通过核验：{evidence}</li>
+                      ))}
+                    </>
                   )}
                 </ul>
               </section>
             </div>
+            <div className="registry-result-deltas">
+              {Object.entries(feedback.deltas).map(([key, value]) => (
+                <span data-negative={value < 0} key={key}>
+                  {key === "score" ? "得分" : key === "safety" ? "安全" : key === "reputation" ? "声誉" : "稳定度"}
+                  <strong>{value > 0 ? `+${value}` : value}</strong>
+                </span>
+              ))}
+            </div>
+            {!feedback.correct || feedback.skippedSteps.length > 0 ? (
+              <div className="registry-result-review">
+                <section>
+                  <strong>遗漏线索</strong>
+                  <p>{feedback.missedClues.slice(0, 2).join("；") || "已覆盖本案主要线索。"}</p>
+                </section>
+                <section>
+                  <strong>跳过步骤</strong>
+                  <p>{feedback.skippedSteps.slice(0, 3).join("、") || "没有跳过关键核验来源。"}</p>
+                </section>
+              </div>
+            ) : null}
             <strong className="registry-consequence-title">即时后果</strong>
             <ul className="registry-consequence-list">
               {feedback.consequences.map((consequence) => (

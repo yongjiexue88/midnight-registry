@@ -2,6 +2,8 @@
 
 Original prompt: Finish the marked Midnight Registry V1-V4 roadmap, review the current changes, create the required animations and materials, verify formats and crops, fix findings, update the plan, and commit when complete.
 
+Current objective (2026-06-14): Implement every Sprint and material/audio/animation requirement in `docs/游戏体验提升计划书.md`, make the game more immersive and urgent, review and fix the resulting code, update the report, then commit and push when all verification passes.
+
 ## Current Direction
 
 Midnight Registry is the active playable prototype. It replaces visible Pet Town routes and pet-care gameplay with a seven-night door-clerk identity verification horror game while preserving the original three-night MVP cases.
@@ -46,3 +48,12 @@ Historical notes for that archived prototype are intentionally not treated as cu
 
 - Durable save persistence remains intentionally deferred until a Midnight Registry database model is designed.
 - Additional authored cases can expand Endless Shift later without changing the completed V1-V4 systems.
+
+## UX Improvement Work Completed
+
+- Sprint 1: directed first-night tutorial, current objective, five-stage case progress, layered hints, evidence thresholds, and explanatory results.
+- Sprint 2: interactive document comparison, positive/negative evidence capture, phone states, scanner feedback, talking/question states, CCTV hotspots, and explicit saves.
+- Sprint 3: Night 3 foreshadowing rewrite, all eight CCTV channels with night unlocks, nightly objectives, mid-shift events, and cliffhangers.
+- Sprint 4: desk-like prep phase, ten prep sprites, shift transition, 15 generated WAV effects, stamp feedback, and stat-damage animation.
+- Maintenance: 68-case scope unified, endless count renamed, runtime asset verification extended, and `/animation-debug` added.
+- Runtime review exercised the three-case tutorial, 208-room phone conflict, CCTV freeze/save, security result, scanner, question, evidence warning, and hold investigation.

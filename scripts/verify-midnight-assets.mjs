@@ -49,6 +49,19 @@ const characterCount = verifyDirectory(
 );
 const propCount = verifyDirectory("public/assets/midnight-registry/props", 512, 512, 39);
 const cctvCount = verifyDirectory("public/assets/midnight-registry/cctv", 512, 512, 8);
+const prepCount = verifyDirectory("public/assets/midnight-registry/prep", 512, 512, 10);
+
+const audioDirectory = path.join(root, "public/assets/midnight-registry/audio");
+const audioFiles = fs.readdirSync(audioDirectory).filter((file) => file.endsWith(".wav")).sort();
+if (audioFiles.length !== 15) {
+  throw new Error(`Expected 15 WAV files, found ${audioFiles.length}`);
+}
+for (const file of audioFiles) {
+  const buffer = fs.readFileSync(path.join(audioDirectory, file));
+  if (buffer.length <= 44 || buffer.subarray(0, 4).toString("ascii") !== "RIFF") {
+    throw new Error(`${file} is not a valid non-empty PCM WAV asset`);
+  }
+}
 
 const designSystemPath = path.join(root, "data/midnightRegistryDesignSystem.ts");
 const designSystem = fs.readFileSync(designSystemPath, "utf8");
@@ -61,7 +74,34 @@ if (animationCount !== 56) {
   throw new Error(`Expected 56 reusable animation events, found ${animationCount}`);
 }
 
+const gameComponent = fs.readFileSync(
+  path.join(root, "components/midnight/MidnightRegistryGame.tsx"),
+  "utf8",
+);
+const globalStyles = fs.readFileSync(path.join(root, "styles/globals.css"), "utf8");
+const requiredRuntimeMarkers = [
+  "registry-objective-panel",
+  "registry-case-progress",
+  "registry-document-modal",
+  "registry-cctv-hotspot",
+  "registry-tool-result",
+  "registry-result-stamp",
+  'recordCaseAction("tool:cctv")',
+  'recordCaseAction("save:cctv")',
+  'playSound("stamp"',
+  "getDecisionEvidenceWarning",
+  "tutorialStepsByVisitor",
+  "nightExperiences",
+];
+const missingRuntimeMarkers = requiredRuntimeMarkers.filter(
+  (marker) => !gameComponent.includes(marker) && !globalStyles.includes(marker),
+);
+if (missingRuntimeMarkers.length > 0) {
+  throw new Error(`Missing runtime animation/interaction markers:\n${missingRuntimeMarkers.join("\n")}`);
+}
+
 console.log(
   `Verified ${characterCount} portraits (512x768), ${propCount} props (512x512), ` +
-    `${cctvCount} CCTV scenes (512x512), and ${animationCount} animation events.`,
+    `${cctvCount} CCTV scenes (512x512), ${prepCount} prep assets (512x512), ` +
+    `${audioFiles.length} WAV effects, ${animationCount} animation events, and runtime triggers.`,
 );

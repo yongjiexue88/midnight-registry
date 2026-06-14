@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "lint": "tsc --noEmit",
+    "generate:audio": "node scripts/generate-midnight-audio.mjs",
     "verify:assets": "node scripts/verify-midnight-assets.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

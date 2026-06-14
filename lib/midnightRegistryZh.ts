@@ -277,12 +277,12 @@ const caseCopies: Record<string, Partial<VisitorCopy>> = {
     feature: "没有围巾，双手干净",
     clothing: "蓝围巾折好放在口袋里",
     voice: "语气过于平稳，听不见呼吸",
-    behavior: "在登记簿上画了圆圈",
-    clues: ["房号错误。", "朴米娜在室外从不摘围巾。", "登记签名错误。"],
-    phone: "208 室占线，随后拨号音开始像人在哼歌。",
+    behavior: "在登记簿上画圆圈时，房间线路同步重复她的声音",
+    clues: ["房号错误。", "房间电话与门外来客同时说话。", "走廊监控连续三帧无法记录她的影子。"],
+    phone: "208 室在门外来客说话时同步接通。两个声音停止后，第二只听筒仍在呼吸。",
     scanner: "证件号码有效，但工牌房号是 280。",
-    camera: "她脖子上没有围巾。",
-    question: "她不记得星号签名。",
+    camera: "她的影子消失三帧，再出现时朝向灯光。",
+    question: "她知道星号签名，却说不出围巾上是哪种颜料。",
   },
   "d1-guo-real": {
     reason: "为客户量体结束后回楼",
@@ -484,19 +484,19 @@ const caseCopies: Record<string, Partial<VisitorCopy>> = {
     camera: "502 室内已经能看到小提琴盒。",
     question: "他声称徐欧文让自己来拿琴盒。",
   },
-  "d3-final-guard": {
-    reason: "声称来换班，并说你的临时合同已进入“等待替换”状态",
-    eyes: "隔着玻璃无法辨认",
-    hair: "与你完全相同的轮廓",
-    feature: "佩戴你的备用工牌，拿着签署完整的换班令",
-    clothing: "旧式月影制服，在雨中却完全干燥",
-    voice: "就是你的声音，只是更温和",
-    behavior: "它说：“你的班结束了。我已经登记在册。”",
-    clues: ["今晚规则没有换班安排。", "物业无人接听。", "监控显示门外没有影子。", "出入簿已将薛夜登记为当班人员。", "你工牌背面写着：不得登记第二个自己。"],
-    phone: "前台电话拨给了自己。听筒里有人说：“你不是第一名前台。别给那个来替换你的人开门。”",
-    scanner: "工牌 0000-00 打开一份真实档案：薛夜，临时夜班门岗，状态“等待替换”。",
-    camera: "门外换班员没有影子，而座椅监控仍拍到你坐在桌前。",
-    question: "它能回答所有记录事实，却说不出你工牌背面那句手写警告。",
+  "d3-rina-hold": {
+    reason: "为 302 室送来药品；房间线路暂时无人接听",
+    eyes: "棕色",
+    hair: "已经掀起头盔面罩",
+    feature: "密封完好的月影快递药品箱",
+    clothing: "被雨淋透的黄色快递外套",
+    voice: "疲惫、普通，只想把包裹留下",
+    behavior: "停在警戒线外，同意等待回电",
+    clues: ["快递身份和封条有效。", "302 室无人接听。", "宵禁规则要求包裹留置前台。"],
+    phone: "302 室无人接听。线路轻响一次后恢复正常拨号音。",
+    scanner: "快递证 MC-210 有效，并与密封药品箱绑定。",
+    camera: "快递员始终停在警戒线外，影子没有异常。",
+    question: "她同意等待，包裹保持密封并留在前台。",
   },
 };
 
@@ -616,8 +616,8 @@ export const chineseEntryLogs: Record<number, EntryLog[]> = {
     { time: "19:20", subject: "陈睿 / 410", state: "医院值班", detail: "提前回楼必须取得医院确认。", tone: "warning" },
     { time: "22:52", subject: "朴米娜 / 208", state: "已在楼内", detail: "若第二个朴米娜出现，即构成身份冲突。", tone: "danger" },
     { time: "23:20", subject: "王玉兰 / 601", state: "已在楼内", detail: "旧钥匙已登记，大楼不存在七楼目的地。", tone: "danger" },
-    { time: "23:58", subject: "前台班次", state: "无人接班", detail: "今晚规则没有任何交接安排。", tone: "danger" },
-    { time: "23:59", subject: "薛夜", state: "正在值班", detail: "当前前台已登记；第二次登记会覆盖其中一个。", tone: "danger" },
+    { time: "23:58", subject: "前台传真", state: "异常通知", detail: "机器吐出一张 03:00 换班单，物业否认签发。", tone: "danger" },
+    { time: "23:59", subject: "前台监控", state: "丢失一帧", detail: "缺失画面恢复前，椅子上短暂出现另一个门岗轮廓。", tone: "danger" },
   ],
   4: [
     { time: "20:12", subject: "李梅 / 302", state: "仅走楼梯", detail: "今日没有电梯请求。", tone: "clear" },
@@ -645,7 +645,7 @@ export const chineseEntryLogs: Record<number, EntryLog[]> = {
   ],
 };
 
-export const chineseCctvLabels = ["正门", "走廊角度", "前台柜面", "电梯厅"];
+export const chineseCctvLabels = ["正门", "走廊角度", "前台自身", "电梯厅", "污染档案室", "不可能楼梯间", "蓝星维修车辆", "安保岗亭"];
 
 export function getChineseResident(id?: string) {
   return id ? residentCopies[id] : undefined;

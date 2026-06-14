@@ -25,3 +25,8 @@ When implementing from a selected generated mock, treat that image as the source
 - Midnight Registry exported assets must be clean reusable game materials: no external sheet labels, filename strips, card borders, or neighboring artwork may remain in individual exports; characters use uniform `512 x 768` portrait canvases and props/tools/clues use uniform `512 x 512` canvases, with contact-sheet review before considering the asset pass complete.
 - Midnight Registry 的主游戏可见内容默认使用简体中文，包括剧情、住户档案、规则、工具结果、监控、结算、维修小游戏和结局；英文仅可保留在稳定的内部 ID 与判定逻辑中。
 - 留置 / 等待必须是可互动的调查分支：玩家选择回拨、复查监控或观察反应，取得不同证据后再进行允许、拒绝、呼叫安保或继续留置的二次裁决。
+- 《午夜登记簿》的前 10 分钟必须被明确导演：第一夜前三案依次教学文件与档案、外貌差异、证据与安保，之后才开放自由核验。
+- 主游戏应始终显示当前目标、案件阶段和证据完整度；玩家停滞时分层提示，但提示不得直接公布真假答案。
+- 关键工具与裁决必须有即时音画反馈，整体节奏应更紧迫：电话、扫描、CCTV、提问、印章、数值受损和夜间转场都不能只返回文字。
+- 第三夜只能铺垫换班异常与前台影像，不得让第二个薛夜实体来访；第七夜必须保留为唯一的前台复制体实体高潮。
+- 白日准备阶段应呈现为旧公寓门岗桌面：合同、支援道具、值班手册、值班铃和门禁总开关均作为可复用游戏素材，而不是普通设置卡片。

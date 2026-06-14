@@ -475,7 +475,7 @@ export const registryNightPlans: RegistryNightPlan[] = [
     storyTheme: "Outside paperwork begins to contradict the building's memory.",
     keyEvent: "Blue Star Repair appears on tonight's work list even though old records say the company closed twelve years ago.",
     mechanic: "Non-residents need correct appointment, time, company, and room, but old work orders may be bait for impossible entries.",
-    visitorTarget: "10 visitors",
+    visitorTarget: "8 visitors",
     rules: ["Food delivery stays outside after 22:00.", "Sixth-floor maintenance is suspended.", "Forgotten-key claims require phone confirmation.", "Any Blue Star Repair claim after 21:00 needs a second source."],
     encounters: [
       { id: "n2-01", visitor: "Han Dong", claim: "Blue Star repair at 20:30", correctDecision: "allow", evidence: ["Appointment matches.", "Task is 4F electrical box."] },
@@ -486,8 +486,6 @@ export const registryNightPlans: RegistryNightPlan[] = [
       { id: "n2-06", visitor: "Zhao Jun", claim: "Forgot key", correctDecision: "allow", evidence: ["Phone confirms.", "Mail-ledger habit matches."] },
       { id: "n2-07", visitor: "Wang Yulan", claim: "Resident 601", correctDecision: "allow", evidence: ["Resident, not maintenance.", "Cane matches."] },
       { id: "n2-08", visitor: "Ke Ren", claim: "6F vents", correctDecision: "reject", evidence: ["No appointment.", "6F maintenance suspended."] },
-      { id: "n2-09", visitor: "Owen Xu", claim: "Resident 502", correctDecision: "allow", evidence: ["Silver latch.", "Hums before speaking."] },
-      { id: "n2-10", visitor: "Unknown courier", claim: "Parcel for 701", correctDecision: "reject", evidence: ["No seventh floor.", "No appointment."] },
     ],
   },
   {
@@ -496,7 +494,7 @@ export const registryNightPlans: RegistryNightPlan[] = [
     storyTheme: "A copied person can stand at the glass while the original answers from upstairs.",
     keyEvent: "A room line says the real resident is already inside, and a later call warns that the player is not the first clerk.",
     mechanic: "Phone can confirm, fail, reveal already-inside cases, or trigger anomalies.",
-    visitorTarget: "9 visitors",
+    visitorTarget: "8 visitors",
     rules: ["Call rooms for arrivals after 22:30.", "If the room says the resident is already inside, refuse the door.", "Duplicate voice is security-level danger.", "A person cannot be safely registered in two places at once."],
     encounters: [
       { id: "n3-01", visitor: "Chen Rui", claim: "Home early", correctDecision: "reject", evidence: ["Hospital phone says he is in surgery.", "Scar wrong side."] },
@@ -507,7 +505,6 @@ export const registryNightPlans: RegistryNightPlan[] = [
       { id: "n3-06", visitor: "Guo Lan", claim: "Tailor 402", correctDecision: "reject", evidence: ["Loose sleeves.", "Phone contradicts."] },
       { id: "n3-07", visitor: "Noah Xu", claim: "Owen's brother", correctDecision: "reject", evidence: ["No appointment.", "Owen has no brother in city."] },
       { id: "n3-08", visitor: "Rina Sol", claim: "Medicine parcel", correctDecision: "wait", evidence: ["Phone no answer.", "Ledger says courier can leave parcel outside."] },
-      { id: "n3-09", visitor: "Y. Xue", claim: "Shift change", correctDecision: "reject", evidence: ["No shift change.", "Badge 000 appears corrupted."] },
     ],
   },
   {
