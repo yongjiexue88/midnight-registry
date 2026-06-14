@@ -1,8 +1,22 @@
 # Midnight Registry
 
+![Midnight Registry cover](public/readme/midnight-registry-cover.png)
+
+**A Chinese-first night-desk horror verification game where every stamp decides who gets to exist.**
+
 Midnight Registry is a Chinese-first Next.js prototype for a night-desk identity verification horror game set in Moonshadow Apartments. The player works as a temporary door clerk, compares visitor claims against resident records, and decides whether each person should be allowed in, refused, held for more investigation, or escalated to security.
 
 The older Pocket Town Companions direction is archived. This repository now tracks Midnight Registry as the active playable prototype and reusable design-system source.
+
+## Preview
+
+![Gameplay verification desk screenshot](public/readme/gameplay-verification.png)
+
+The core desk loop puts the current objective, evidence chain, visitor, archive materials, verification tools, and final verdict buttons on one tense screen.
+
+![Registry error visitors monster lineup](public/readme/monster-lineup.png)
+
+Impostors are not generic monsters. They are registry error records that can copy paperwork, but break down when questioned about private habits, relationships, and memories.
 
 ## Game Premise
 
