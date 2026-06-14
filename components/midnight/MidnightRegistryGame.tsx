@@ -1,1060 +1,50 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { registryCharacterAssets, registryNightPlans } from "@/data/midnightRegistryDesignSystem";
 import { useTranslation } from "@/lib/translations";
 
-type Decision = "allow" | "reject" | "security" | "wait";
-type ToolName = "phone" | "scanner" | "camera" | "question";
-type DeskView = "documents" | "archive" | "notice" | "ledger";
-type ChecklistKey = "documents" | "archive" | "phone" | "appearance" | "rules" | "ledger";
-type EvidenceKey = "id" | "appearance" | "schedule" | "phone" | "behavior" | "rules" | "appointment" | "ledger";
-type VisitorType = "resident" | "visitor" | "maintenance" | "courier" | "emergency" | "clerk";
-type QuestionCategory = "identity" | "relation" | "situation" | "trap";
-type VisitorMood = "idle" | "watched" | "called" | "cornered" | "alarmed" | "revealed";
-
-type Resident = {
-  id: string;
-  name: string;
-  room: string;
-  job: string;
-  idCode: string;
-  eyes: string;
-  hair: string;
-  feature: string;
-  habit: string;
-  forbidden: string;
-  greeting: string;
-};
-
-type Appointment = {
-  name: string;
-  company: string;
-  room: string;
-  time: string;
-  task: string;
-};
-
-type Visitor = {
-  id: string;
-  day: number;
-  sourceResidentId?: string;
-  appointment?: Appointment;
-  name: string;
-  room: string;
-  job: string;
-  idCode: string;
-  arrival: string;
-  reason: string;
-  eyes: string;
-  hair: string;
-  feature: string;
-  clothing: string;
-  voice: string;
-  behavior: string;
-  badge: string;
-  expectedAction: Decision;
-  isMirror: boolean;
-  threat: number;
-  clues: string[];
-  phone: string;
-  scanner: string;
-  camera: string;
-  question: string;
-  portrait: "amber" | "blue" | "green" | "red" | "violet" | "gray";
-};
-
-type HistoryEntry = {
-  visitor: string;
-  room: string;
-  decision: Decision;
-  correct: boolean;
-  mirror: boolean;
-  consequence: string;
-};
-
-type EvidenceOption = {
-  key: EvidenceKey;
-  label: string;
-  detail: string;
-};
-
-type EntryLog = {
-  time: string;
-  subject: string;
-  state: string;
-  detail: string;
-  tone?: "clear" | "warning" | "danger";
-};
-
-type PhoneLine = {
-  label: string;
-  result: string;
-};
-
-type QuestionOption = {
-  category: QuestionCategory;
-  prompt: string;
-  answer: string;
-  signal: string;
-};
-
-const checklistItems: { key: ChecklistKey; label: string }[] = [
-  { key: "documents", label: "Paper identity checked" },
-  { key: "archive", label: "Archive reality matched" },
-  { key: "phone", label: "Social identity confirmed" },
-  { key: "appearance", label: "Appearance compared" },
-  { key: "rules", label: "Night rules reviewed" },
-  { key: "ledger", label: "Entry log checked" },
-];
-
-const evidenceOptions: EvidenceOption[] = [
-  { key: "id", label: "Paper identity mismatch", detail: "Printed identity, badge, checksum, or room number does not line up." },
-  { key: "appearance", label: "Appearance mismatch", detail: "Face, feature side, carried item, clothing, or camera view contradicts the archive." },
-  { key: "schedule", label: "Schedule conflict", detail: "Arrival, curfew, shift, or already-inside timing is impossible." },
-  { key: "phone", label: "Social identity conflict", detail: "Room, employer, management, or neighbor call contradicts the claim." },
-  { key: "behavior", label: "Unrecorded memory failure", detail: "Habit answer, greeting, speech pattern, or private routine is wrong." },
-  { key: "rules", label: "Rule violation", detail: "Tonight's notice blocks this entrant or requires escalation." },
-  { key: "appointment", label: "Appointment mismatch", detail: "Visitor, courier, maintenance, company, time, room, or work order is wrong." },
-  { key: "ledger", label: "Reality ledger conflict", detail: "Today's in/out record conflicts with the person at the glass." },
-];
-
-const emptyToolCounts: Record<ToolName, number> = {
-  phone: 0,
-  scanner: 0,
-  camera: 0,
-  question: 0,
-};
-
-const visitorTypeLabels: Record<VisitorType, string> = {
-  resident: "Resident",
-  visitor: "Registered visitor",
-  maintenance: "Maintenance",
-  courier: "Courier",
-  emergency: "Emergency staff",
-  clerk: "Desk staff",
-};
-
-const decisionLabels: Record<Decision, string> = {
-  allow: "Allow entry",
-  reject: "Refuse entry",
-  security: "Call security",
-  wait: "Hold / wait",
-};
-
-const residents: Resident[] = [
-  {
-    id: "lin-anna",
-    name: "Lin Anna",
-    room: "203",
-    job: "Dance Teacher",
-    idCode: "7821-44",
-    eyes: "Brown",
-    hair: "Short black hair, left part",
-    feature: "Mole under left eye",
-    habit: "Returns before 21:00",
-    forbidden: "Never wears red",
-    greeting: "Taps two quick rhythms on the desk",
-  },
-  {
-    id: "zhou-qiming",
-    name: "Zhou Qiming",
-    room: "506",
-    job: "Retired Police Officer",
-    idCode: "5060-18",
-    eyes: "Dark brown",
-    hair: "Silver buzz cut",
-    feature: "Black glove on right hand",
-    habit: "Keeps every answer short",
-    forbidden: "Never says he forgot his key",
-    greeting: "Nods once without smiling",
-  },
-  {
-    id: "li-mei",
-    name: "Li Mei",
-    room: "302",
-    job: "Florist",
-    idCode: "3029-71",
-    eyes: "Hazel",
-    hair: "Low bun with loose fringe",
-    feature: "Silver bracelet on left wrist",
-    habit: "Never uses the elevator",
-    forbidden: "Does not answer to Auntie",
-    greeting: "Brings flowers on Wednesday",
-  },
-  {
-    id: "chen-rui",
-    name: "Chen Rui",
-    room: "410",
-    job: "Emergency Doctor",
-    idCode: "4108-02",
-    eyes: "Black",
-    hair: "Tidy side sweep",
-    feature: "Thin scar on left eyebrow",
-    habit: "Works overnight shifts",
-    forbidden: "Not expected home on final night",
-    greeting: "Says the current date first",
-  },
-  {
-    id: "zhao-jun",
-    name: "Zhao Jun",
-    room: "104",
-    job: "Accountant",
-    idCode: "1042-33",
-    eyes: "Brown",
-    hair: "Neat middle part",
-    feature: "Round wire glasses",
-    habit: "Always carries a leather folder",
-    forbidden: "Never brings animals inside",
-    greeting: "Asks for the mail ledger",
-  },
-  {
-    id: "wang-yulan",
-    name: "Wang Yulan",
-    room: "601",
-    job: "Retired Librarian",
-    idCode: "6011-29",
-    eyes: "Gray",
-    hair: "White braid over right shoulder",
-    feature: "Brass cane with moon handle",
-    habit: "Speaks only Mandarin at the desk",
-    forbidden: "Never mentions a seventh floor",
-    greeting: "Slides her old key across the counter",
-  },
-  {
-    id: "mina-park",
-    name: "Mina Park",
-    room: "208",
-    job: "Art Student",
-    idCode: "2087-65",
-    eyes: "Green",
-    hair: "Copper bob",
-    feature: "Blue scarf with paint stains",
-    habit: "Signs the ledger with a star",
-    forbidden: "Never removes the scarf outside",
-    greeting: "Apologizes for paint on her hands",
-  },
-  {
-    id: "sun-hao",
-    name: "Sun Hao",
-    room: "315",
-    job: "Night Cook",
-    idCode: "3154-90",
-    eyes: "Brown",
-    hair: "Shaved sides",
-    feature: "Small burn mark on right thumb",
-    habit: "Smells faintly of garlic oil",
-    forbidden: "Never knocks more than three times",
-    greeting: "Leaves one wrapped bun for the desk",
-  },
-  {
-    id: "guo-lan",
-    name: "Guo Lan",
-    room: "402",
-    job: "Tailor",
-    idCode: "4025-12",
-    eyes: "Black",
-    hair: "Long braid pinned high",
-    feature: "Measuring tape around neck",
-    habit: "Corrects crooked collars",
-    forbidden: "Never wears loose sleeves",
-    greeting: "Calls the building by its old name",
-  },
-  {
-    id: "owen-xu",
-    name: "Owen Xu",
-    room: "502",
-    job: "Violinist",
-    idCode: "5026-88",
-    eyes: "Blue",
-    hair: "Dark curls",
-    feature: "Violin case with silver latch",
-    habit: "Hums before speaking",
-    forbidden: "Never lets anyone carry the case",
-    greeting: "Asks whether room 303 complained",
-  },
-];
-
-const appointments: Appointment[] = [
-  { name: "Han Dong", company: "Blue Star Repair", room: "4F", time: "20:30", task: "Repair fourth-floor electrical box" },
-  { name: "Rina Sol", company: "Moon Courier", room: "Desk", time: "21:10", task: "Drop sealed medicine parcel for 302" },
-];
-
-const playableNightCount = 3;
-const visitorsPerNight = 8;
-
-const nights = registryNightPlans.slice(0, playableNightCount).map((night) => ({
-  title: `Night ${night.id}`,
-  subtitle: night.title,
-  rules: night.rules,
-}));
-
-const visitors: Visitor[] = [
-  {
-    id: "d1-lin-real",
-    day: 1,
-    sourceResidentId: "lin-anna",
-    name: "Lin Anna",
-    room: "203",
-    job: "Dance Teacher",
-    idCode: "7821-44",
-    arrival: "20:18",
-    reason: "Home from evening rehearsal",
-    eyes: "Brown",
-    hair: "Short black hair, left part",
-    feature: "Mole under left eye",
-    clothing: "Cream jacket, black dance bag",
-    voice: "Soft, counting under her breath",
-    behavior: "Taps two quick rhythms on the desk",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 3,
-    clues: ["All archive fields match.", "Habit matches the resident note."],
-    phone: "203 answers after four rings: 'Yes, that is me downstairs.'",
-    scanner: "ID 7821-44 is clean.",
-    camera: "Camera confirms the mole is under her left eye.",
-    question: "She refuses the red umbrella and says red ruins her luck.",
-    portrait: "amber",
-  },
-  {
-    id: "d1-lin-fake",
-    day: 1,
-    sourceResidentId: "lin-anna",
-    name: "Lin Anya",
-    room: "203",
-    job: "Dance Teacher",
-    idCode: "7821-44",
-    arrival: "21:36",
-    reason: "Says rehearsal ran late",
-    eyes: "Brown",
-    hair: "Short black hair, right part",
-    feature: "Mole under right eye",
-    clothing: "Red raincoat, no dance bag",
-    voice: "Repeats 'I am expected' twice",
-    behavior: "Knocks in one slow rhythm",
-    badge: "Resident badge intact",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 15,
-    clues: ["Name is wrong.", "Mole is on the wrong side.", "Lin Anna never wears red."],
-    phone: "203 rings from inside and a second voice whispers along with the person at the door.",
-    scanner: "ID code is valid, but the printed name reads Lin Anya.",
-    camera: "The shadow falls toward the hallway light.",
-    question: "She says red is her favorite performance color.",
-    portrait: "red",
-  },
-  {
-    id: "d1-zhou-real",
-    day: 1,
-    sourceResidentId: "zhou-qiming",
-    name: "Zhou Qiming",
-    room: "506",
-    job: "Retired Police Officer",
-    idCode: "5060-18",
-    arrival: "20:47",
-    reason: "Returning from a card game",
-    eyes: "Dark brown",
-    hair: "Silver buzz cut",
-    feature: "Black glove on right hand",
-    clothing: "Pressed gray coat",
-    voice: "Low, clipped answers",
-    behavior: "Nods once without smiling",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 4,
-    clues: ["Right-hand glove matches.", "Brief answers match the habit note."],
-    phone: "506: 'Let him up.' The line clicks off.",
-    scanner: "ID 5060-18 is clean.",
-    camera: "Camera angle confirms right-hand glove.",
-    question: "Asked about his key, he says only: 'In pocket.'",
-    portrait: "gray",
-  },
-  {
-    id: "d1-zhou-fake",
-    day: 1,
-    sourceResidentId: "zhou-qiming",
-    name: "Zhou Qiming",
-    room: "506",
-    job: "Retired Police Officer",
-    idCode: "5060-18",
-    arrival: "22:05",
-    reason: "Forgot his key upstairs",
-    eyes: "Dark brown",
-    hair: "Silver buzz cut",
-    feature: "Black glove on left hand",
-    clothing: "Gray coat with wet cuffs",
-    voice: "Friendly, long explanations",
-    behavior: "Smiles through every answer",
-    badge: "Resident badge intact",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 18,
-    clues: ["Glove is on the wrong hand.", "He says he forgot his key.", "His speech is too talkative for Zhou."],
-    phone: "506 answers in Zhou's clipped voice: 'I am inside.'",
-    scanner: "The ID is clean but warmer than the desk lamp.",
-    camera: "The left glove does not move when he taps the glass.",
-    question: "He gives a long story about losing keys, which violates the archive note.",
-    portrait: "red",
-  },
-  {
-    id: "d1-mina-real",
-    day: 1,
-    sourceResidentId: "mina-park",
-    name: "Mina Park",
-    room: "208",
-    job: "Art Student",
-    idCode: "2087-65",
-    arrival: "21:02",
-    reason: "Back from studio class",
-    eyes: "Green",
-    hair: "Copper bob",
-    feature: "Blue scarf with paint stains",
-    clothing: "Black coat, paint on fingers",
-    voice: "Breathless, apologetic",
-    behavior: "Signs the ledger with a star",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 5,
-    clues: ["Blue scarf and star signature match.", "ID and room match archive."],
-    phone: "208: no answer. Her record says she is usually out at studio class.",
-    scanner: "ID 2087-65 is clean.",
-    camera: "Paint-stained scarf is visible on the south camera.",
-    question: "She says she never removes the scarf outside.",
-    portrait: "green",
-  },
-  {
-    id: "d1-mina-fake",
-    day: 1,
-    sourceResidentId: "mina-park",
-    name: "Mina Park",
-    room: "280",
-    job: "Art Student",
-    idCode: "2087-65",
-    arrival: "21:18",
-    reason: "Wants to retrieve a sketchbook",
-    eyes: "Green",
-    hair: "Copper bob",
-    feature: "No scarf, clean hands",
-    clothing: "Blue scarf folded in pocket",
-    voice: "Too even, no breath",
-    behavior: "Signs the ledger with a circle",
-    badge: "Resident badge cracked through room number",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 14,
-    clues: ["Room number is wrong.", "Mina never removes the scarf outside.", "Ledger mark is wrong."],
-    phone: "208 is busy, then the dial tone starts humming.",
-    scanner: "ID code is clean, but badge room reads 280.",
-    camera: "No scarf is visible on her neck.",
-    question: "She does not remember the star signature.",
-    portrait: "violet",
-  },
-  {
-    id: "d1-guo-real",
-    day: 1,
-    sourceResidentId: "guo-lan",
-    name: "Guo Lan",
-    room: "402",
-    job: "Tailor",
-    idCode: "4025-12",
-    arrival: "22:10",
-    reason: "Returned from a client fitting",
-    eyes: "Black",
-    hair: "Long braid pinned high",
-    feature: "Measuring tape around neck",
-    clothing: "Fitted jacket, narrow sleeves",
-    voice: "Sharp and tired",
-    behavior: "Corrects a crooked collar on the counter mannequin",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 5,
-    clues: ["Tailor habit and narrow sleeves match.", "ID and room match archive."],
-    phone: "402: no answer, but the workshop radio can be heard through the hallway camera.",
-    scanner: "ID 4025-12 is clean.",
-    camera: "Measuring tape and pinned braid match the archive.",
-    question: "She calls the building Silver Moon House, its old name.",
-    portrait: "blue",
-  },
-  {
-    id: "d1-owen-fake",
-    day: 1,
-    sourceResidentId: "owen-xu",
-    name: "Owen Xu",
-    room: "502",
-    job: "Violinist",
-    idCode: "5026-89",
-    arrival: "23:11",
-    reason: "Says room 303 complained about practice",
-    eyes: "Blue",
-    hair: "Dark curls",
-    feature: "Violin case with brass latch",
-    clothing: "Long navy scarf",
-    voice: "Hums after speaking",
-    behavior: "Offers the case to be carried upstairs",
-    badge: "Resident badge intact",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 17,
-    clues: ["ID code is one digit off.", "Case latch should be silver.", "Owen never lets anyone carry the case."],
-    phone: "502: a violin note plays, then someone says, 'My case is here with me.'",
-    scanner: "ID 5026-89 fails checksum.",
-    camera: "The case latch flashes brass, not silver.",
-    question: "He asks you to carry the case, which Owen never does.",
-    portrait: "violet",
-  },
-  {
-    id: "d2-han-real",
-    day: 2,
-    appointment: appointments[0],
-    name: "Han Dong",
-    room: "4F",
-    job: "Maintenance Contractor",
-    idCode: "BSR-443",
-    arrival: "20:31",
-    reason: "Repair fourth-floor electrical box",
-    eyes: "Brown",
-    hair: "Black cap",
-    feature: "Blue Star Repair patch",
-    clothing: "Tool vest, sealed toolbox",
-    voice: "Professional and impatient",
-    behavior: "Names the fourth-floor breaker panel",
-    badge: "Contractor pass BSR-443",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 6,
-    clues: ["Appointment name, company, time, and location match.", "Fourth-floor task is allowed."],
-    phone: "The superintendent line confirms Blue Star Repair at 20:30, then coughs through a burst of old rain static.",
-    scanner: "Contractor pass BSR-443 matches the register.",
-    camera: "Toolbox seal matches the notice photo.",
-    question: "He says there is no seventh floor in the work order.",
-    portrait: "blue",
-  },
-  {
-    id: "d2-han-fake",
-    day: 2,
-    appointment: appointments[0],
-    name: "Han Dong",
-    room: "7F",
-    job: "Maintenance Contractor",
-    idCode: "BSR-443",
-    arrival: "23:30",
-    reason: "Repair upper-floor wiring",
-    eyes: "Brown",
-    hair: "Black cap",
-    feature: "Blue Heart Repair patch",
-    clothing: "Empty toolbox, spotless gloves",
-    voice: "Whispers from behind the mask",
-    behavior: "Insists the seventh floor is waiting",
-    badge: "Contractor pass BSR-443",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 21,
-    clues: ["Company name is wrong.", "Arrival time is wrong.", "There is no seventh floor.", "Blue Star Repair closed twelve years ago, but tonight's list keeps printing its work orders."],
-    phone: "The superintendent line is dead; a wet tapping answers from the receiver and spells Blue Star in pulses.",
-    scanner: "Pass number exists, but the company imprint says Blue Heart Repair and the issuer date is twelve years old.",
-    camera: "The toolbox opens to black cloth instead of tools.",
-    question: "He repeats 'seventh floor' after every question.",
-    portrait: "red",
-  },
-  {
-    id: "d2-li-real",
-    day: 2,
-    sourceResidentId: "li-mei",
-    name: "Li Mei",
-    room: "302",
-    job: "Florist",
-    idCode: "3029-71",
-    arrival: "20:52",
-    reason: "Returning with flowers",
-    eyes: "Hazel",
-    hair: "Low bun with loose fringe",
-    feature: "Silver bracelet on left wrist",
-    clothing: "Green rain cape, wrapped lilies",
-    voice: "Warm, refuses the elevator",
-    behavior: "Takes the stairs without being asked",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 4,
-    clues: ["Bracelet, time, and flower habit match.", "She refuses the elevator."],
-    phone: "302: no answer. The stair camera shows her going up.",
-    scanner: "ID 3029-71 is clean.",
-    camera: "Left wrist bracelet catches the stairwell light.",
-    question: "She frowns when called Auntie and corrects you to Ms. Li.",
-    portrait: "green",
-  },
-  {
-    id: "d2-li-fake",
-    day: 2,
-    sourceResidentId: "li-mei",
-    name: "Li Mei",
-    room: "302",
-    job: "Florist",
-    idCode: "3029-71",
-    arrival: "21:28",
-    reason: "Wants the elevator held open",
-    eyes: "Hazel",
-    hair: "Low bun with loose fringe",
-    feature: "Silver bracelet on right wrist",
-    clothing: "Green rain cape, plastic roses",
-    voice: "Calls herself Auntie Li",
-    behavior: "Keeps pressing the elevator button",
-    badge: "Resident badge intact",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 18,
-    clues: ["Bracelet is on the wrong wrist.", "Li Mei never uses the elevator.", "She does not answer to Auntie."],
-    phone: "302 answers with a sleepy voice: 'I already came up the stairs.'",
-    scanner: "ID is clean. The badge glass fogs from the inside.",
-    camera: "Elevator camera shows her reflection arriving one second late.",
-    question: "She smiles when called Auntie.",
-    portrait: "red",
-  },
-  {
-    id: "d2-courier",
-    day: 2,
-    appointment: appointments[1],
-    name: "Rina Sol",
-    room: "Desk",
-    job: "Courier",
-    idCode: "MC-210",
-    arrival: "22:42",
-    reason: "Sealed medicine parcel for 302 after curfew",
-    eyes: "Brown",
-    hair: "Helmet visor down",
-    feature: "Moon Courier box",
-    clothing: "Yellow delivery jacket",
-    voice: "Human, rushed",
-    behavior: "Keeps checking the street",
-    badge: "Courier badge MC-210",
-    expectedAction: "wait",
-    isMirror: false,
-    threat: 2,
-    clues: ["The courier is real.", "After-curfew courier access must be held at the desk.", "The registered parcel is medicine for 302."],
-    phone: "302 does not answer. Management says to hold the sealed parcel at the desk.",
-    scanner: "Courier badge MC-210 is real and tied to the medicine parcel.",
-    camera: "Street camera shows a normal courier bike.",
-    question: "She offers to leave the parcel on the desk and wait for a room call.",
-    portrait: "amber",
-  },
-  {
-    id: "d2-zhao-real",
-    day: 2,
-    sourceResidentId: "zhao-jun",
-    name: "Zhao Jun",
-    room: "104",
-    job: "Accountant",
-    idCode: "1042-33",
-    arrival: "22:58",
-    reason: "Forgot key after office audit",
-    eyes: "Brown",
-    hair: "Neat middle part",
-    feature: "Round wire glasses",
-    clothing: "Leather folder under arm",
-    voice: "Tired, precise",
-    behavior: "Asks for the mail ledger",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 7,
-    clues: ["Forgotten key was verified by phone.", "Folder and ledger habit match."],
-    phone: "104 answers: 'It is me at the door. Ask about the mail ledger.'",
-    scanner: "ID 1042-33 is clean.",
-    camera: "Leather folder is visible under his arm.",
-    question: "He asks for the mail ledger before you mention it.",
-    portrait: "gray",
-  },
-  {
-    id: "d2-wang-real",
-    day: 2,
-    sourceResidentId: "wang-yulan",
-    name: "Wang Yulan",
-    room: "601",
-    job: "Retired Librarian",
-    idCode: "6011-29",
-    arrival: "21:33",
-    reason: "Returning from temple market",
-    eyes: "Gray",
-    hair: "White braid over right shoulder",
-    feature: "Brass cane with moon handle",
-    clothing: "Dark plum coat",
-    voice: "Mandarin only",
-    behavior: "Slides her old key across the counter",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 6,
-    clues: ["Resident entry is allowed.", "Sixth-floor maintenance ban does not apply to residents."],
-    phone: "601: a kettle whistles, then silence.",
-    scanner: "ID 6011-29 is clean.",
-    camera: "Cane handle matches the archive.",
-    question: "She points to 601 and refuses to discuss any other floor.",
-    portrait: "violet",
-  },
-  {
-    id: "d2-maintenance-6f",
-    day: 2,
-    name: "Ke Ren",
-    room: "6F",
-    job: "Maintenance Contractor",
-    idCode: "KR-610",
-    arrival: "21:55",
-    reason: "Inspect sixth-floor vents",
-    eyes: "Black",
-    hair: "Rain hood",
-    feature: "No company patch",
-    clothing: "Wet maintenance coat",
-    voice: "Voice comes from the ceiling speaker first",
-    behavior: "Does not cast a shadow under the desk lamp",
-    badge: "Temporary pass with no appointment",
-    expectedAction: "security",
-    isMirror: true,
-    threat: 22,
-    clues: ["No appointment exists.", "Sixth-floor maintenance is suspended.", "No company patch.", "Door camera loses the body for three frames."],
-    phone: "601 picks up: 'Do not send anyone to my floor.'",
-    scanner: "Temporary pass has no issuer.",
-    camera: "The hallway camera shows an empty doorstep for three frames.",
-    question: "He says the vents are hungry.",
-    portrait: "red",
-  },
-  {
-    id: "d3-chen-fake",
-    day: 3,
-    sourceResidentId: "chen-rui",
-    name: "Chen Rui",
-    room: "410",
-    job: "Emergency Doctor",
-    idCode: "4108-02",
-    arrival: "22:41",
-    reason: "Came home from hospital early",
-    eyes: "Black",
-    hair: "Tidy side sweep",
-    feature: "Thin scar on right eyebrow",
-    clothing: "Clean white coat, no hospital badge",
-    voice: "Says yesterday's date",
-    behavior: "Cannot name the hospital ward",
-    badge: "Resident badge intact",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 24,
-    clues: ["Chen Rui is on overnight duty.", "Scar is on the wrong eyebrow.", "He gives the wrong date."],
-    phone: "Hospital line: 'Dr. Chen is in surgery. Do not open the door.'",
-    scanner: "ID is clean, but the photo scar is on the left eyebrow.",
-    camera: "The visitor's scar is on the right eyebrow.",
-    question: "He cannot name the ward and repeats yesterday's date.",
-    portrait: "red",
-  },
-  {
-    id: "d3-sun-real",
-    day: 3,
-    sourceResidentId: "sun-hao",
-    name: "Sun Hao",
-    room: "315",
-    job: "Night Cook",
-    idCode: "3154-90",
-    arrival: "22:22",
-    reason: "Shift ended early",
-    eyes: "Brown",
-    hair: "Shaved sides",
-    feature: "Small burn mark on right thumb",
-    clothing: "Kitchen jacket, wrapped bun",
-    voice: "Hoarse from the kitchen",
-    behavior: "Knocks exactly three times",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 7,
-    clues: ["Burn mark, knock count, and food habit match.", "Arrival is before mandatory phone-check time."],
-    phone: "315: no answer. The hall microphone catches exactly three knocks.",
-    scanner: "ID 3154-90 is clean.",
-    camera: "Right-thumb burn mark is visible when he lifts the bun.",
-    question: "He leaves one wrapped bun at the desk.",
-    portrait: "amber",
-  },
-  {
-    id: "d3-mina-fake",
-    day: 3,
-    sourceResidentId: "mina-park",
-    name: "Mina Park",
-    room: "208",
-    job: "Art Student",
-    idCode: "2087-65",
-    arrival: "23:02",
-    reason: "Needs to sleep before critique",
-    eyes: "Green",
-    hair: "Copper bob",
-    feature: "Blue scarf with paint stains",
-    clothing: "Black coat, hands too clean",
-    voice: "Answers before questions finish",
-    behavior: "Signs the ledger with a star, then erases it",
-    badge: "Resident badge intact",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 23,
-    clues: ["Phone says Mina is already upstairs.", "Hands are too clean for her studio night.", "The star signature is erased."],
-    phone: "208 answers in a whisper: 'I am already in my room. It learned the star.'",
-    scanner: "ID is clean.",
-    camera: "The scarf is correct, but the reflection keeps painting after her hands stop.",
-    question: "She knows the star answer, then erases it before the ink dries.",
-    portrait: "red",
-  },
-  {
-    id: "d3-lin-real",
-    day: 3,
-    sourceResidentId: "lin-anna",
-    name: "Lin Anna",
-    room: "203",
-    job: "Dance Teacher",
-    idCode: "7821-44",
-    arrival: "22:46",
-    reason: "Called ahead after a locked train delay",
-    eyes: "Brown",
-    hair: "Short black hair, left part",
-    feature: "Mole under left eye",
-    clothing: "Cream jacket, black dance bag",
-    voice: "Counts five, six, seven, eight",
-    behavior: "Taps two quick rhythms on the desk",
-    badge: "Resident badge intact",
-    expectedAction: "allow",
-    isMirror: false,
-    threat: 8,
-    clues: ["Phone confirms the delayed return.", "No red clothing and all archive fields match."],
-    phone: "203: 'The train stalled. I am at the desk now. Ask about red.'",
-    scanner: "ID 7821-44 is clean.",
-    camera: "Mole, bag, and hair part all match.",
-    question: "She refuses a red visitor sticker immediately.",
-    portrait: "green",
-  },
-  {
-    id: "d3-wang-fake",
-    day: 3,
-    sourceResidentId: "wang-yulan",
-    name: "Wang Yulan",
-    room: "701",
-    job: "Retired Librarian",
-    idCode: "6011-29",
-    arrival: "23:14",
-    reason: "Going up to the seventh-floor reading room",
-    eyes: "Gray",
-    hair: "White braid over left shoulder",
-    feature: "Brass cane with moon handle",
-    clothing: "Dark plum coat",
-    voice: "Fluent English: 'Good evening, dear.'",
-    behavior: "Taps the cane seven times",
-    badge: "Resident badge melted at room number",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 26,
-    clues: ["There is no seventh floor.", "Room number is wrong.", "Wang Yulan does not speak English at the desk."],
-    phone: "601: Wang Yulan coughs and says in Mandarin, 'Not me.'",
-    scanner: "ID code belongs to 601, but badge room reads 701.",
-    camera: "The braid hangs over the wrong shoulder.",
-    question: "She asks for the seventh-floor reading room.",
-    portrait: "red",
-  },
-  {
-    id: "d3-guo-fake",
-    day: 3,
-    sourceResidentId: "guo-lan",
-    name: "Guo Lan",
-    room: "402",
-    job: "Tailor",
-    idCode: "4025-12",
-    arrival: "23:29",
-    reason: "Returning from emergency hemming",
-    eyes: "Black",
-    hair: "Long braid pinned high",
-    feature: "Measuring tape around neck",
-    clothing: "Loose sleeves dragging on the floor",
-    voice: "Copies Guo's sharp tone",
-    behavior: "Does not notice the torn cuff on your sleeve",
-    badge: "Resident badge intact",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 22,
-    clues: ["Guo Lan never wears loose sleeves.", "She fails the collar/cuff habit.", "Scanner shows the badge was reprinted at 00:00."],
-    phone: "402: sewing machine noise, then Guo says, 'My sleeves are narrow.'",
-    scanner: "ID is clean, but badge print time is midnight.",
-    camera: "Loose sleeves drag through the rain without getting wet.",
-    question: "She calls the building Moonshadow, not its old name.",
-    portrait: "red",
-  },
-  {
-    id: "d3-owen-visitor",
-    day: 3,
-    sourceResidentId: "owen-xu",
-    name: "Noah Xu",
-    room: "502",
-    job: "Owen's brother",
-    idCode: "VIS-502",
-    arrival: "23:37",
-    reason: "Picking up the violin case",
-    eyes: "Blue",
-    hair: "Dark curls",
-    feature: "No visitor appointment",
-    clothing: "Navy wool coat matching Owen's",
-    voice: "Hums after speaking",
-    behavior: "Asks to carry the case away",
-    badge: "Visitor pass not in register",
-    expectedAction: "reject",
-    isMirror: true,
-    threat: 20,
-    clues: ["No visitor appointment exists.", "Owen never lets anyone carry the case.", "Phone confirms Owen is inside."],
-    phone: "502: Owen says, 'I do not have a brother in the city.'",
-    scanner: "Visitor pass VIS-502 is not in tonight's register.",
-    camera: "The violin case is already visible inside 502.",
-    question: "He says Owen asked him to carry the case.",
-    portrait: "violet",
-  },
-  {
-    id: "d3-final-guard",
-    day: 3,
-    name: "Y. Xue",
-    room: "000",
-    job: "Night Door Clerk",
-    idCode: "0000-00",
-    arrival: "23:59",
-    reason: "Shift change. Says your temporary contract has reached replacement.",
-    eyes: "Unreadable in the glass",
-    hair: "Same silhouette as the current clerk",
-    feature: "Wears your spare badge and carries a signed relief order",
-    clothing: "Old Moonshadow uniform, dry in the rain",
-    voice: "Your voice, only warmer",
-    behavior: "Says, 'Your shift is over. I am already registered.'",
-    badge: "Badge 000 / authorization: Moonshadow Management",
-    expectedAction: "security",
-    isMirror: true,
-    threat: 30,
-    clues: ["Tonight's rules list no shift change.", "Management does not answer.", "CCTV shows no shadow outside.", "The entry log already lists Y. Xue as on duty.", "The back of your badge says: Do not register a second self."],
-    phone: "The desk phone calls itself. A clipped voice says, 'You are not the first clerk. Do not open for the one who asks to replace you.'",
-    scanner: "Badge 0000-00 opens a real file: Y. Xue, Temporary Night Clerk, status waiting for replacement.",
-    camera: "CCTV confirms the relief clerk has no shadow, while the chair camera still shows you at the desk.",
-    question: "It answers every recorded fact correctly, but cannot name the sentence handwritten on the back of your badge.",
-    portrait: "gray",
-  },
-];
-
-const residentIdByName = new Map(residents.map((resident) => [resident.name, resident.id]));
-
-const generatedVisitors: Visitor[] = registryNightPlans
-  .filter((night) => night.id > 3)
-  .flatMap((night) =>
-    night.encounters.map((encounter, index) => {
-      const residentId = residentIdByName.get(encounter.visitor);
-      const resident = residentId ? getResident(residentId) : undefined;
-      const isThreat = encounter.correctDecision === "reject" || encounter.correctDecision === "security";
-      const isUnclear = encounter.correctDecision === "wait";
-      const arrivalMinute = String(8 + index * 4).padStart(2, "0");
-
-      return {
-        id: encounter.id,
-        day: night.id,
-        sourceResidentId: residentId,
-        name: encounter.visitor,
-        room: resident?.room ?? (encounter.visitor.includes("Seventh") ? "7F" : encounter.visitor.includes("Clerk") ? "000" : "VIS"),
-        job: resident?.job ?? encounter.claim,
-        idCode: resident?.idCode ?? `MR-${night.id}${String(index + 1).padStart(2, "0")}`,
-        arrival: `22:${arrivalMinute}`,
-        reason: encounter.claim,
-        eyes: resident?.eyes ?? "Unclear under desk light",
-        hair: resident?.hair ?? "Silhouette varies between cameras",
-        feature: resident?.feature ?? encounter.evidence[0],
-        clothing: isThreat ? "Coat does not match archive notes" : "Clothing matches the claimed role",
-        voice: isThreat ? "Voice repeats with a half-second delay" : isUnclear ? "Line static makes the answer uncertain" : "Voice and cadence match the record",
-        behavior: encounter.evidence.join(" "),
-        badge: isThreat ? "Badge requires verification" : isUnclear ? "Badge scan delayed" : "Badge intact",
-        expectedAction: encounter.correctDecision,
-        isMirror: isThreat,
-        threat: isThreat ? 24 + night.id : isUnclear ? 10 : 6,
-        clues: encounter.evidence,
-        phone: isThreat
-          ? "The room line contradicts the person at the door."
-          : isUnclear
-            ? "No answer. The line clicks, then returns to a normal dial tone."
-            : "The room confirms the person or the expected visit.",
-        scanner: isThreat
-          ? "The scan returns a mismatch or corrupted timestamp."
-          : isUnclear
-            ? "The scan is delayed. Hold the visitor until another source agrees."
-            : "The scan is clean.",
-        camera: isThreat
-          ? "CCTV catches an anomaly in posture, shadow, or carried item."
-          : isUnclear
-            ? "CCTV flickers. The evidence is not decisive yet."
-            : "CCTV matches the archive notes.",
-        question: isThreat
-          ? "The answer conflicts with a habit, schedule, or building rule."
-          : isUnclear
-            ? "The answer is plausible but needs a second source."
-            : "The habit answer matches.",
-        portrait: isThreat ? "red" : isUnclear ? "violet" : "green",
-      } satisfies Visitor;
-    }),
-  );
-
-const playableVisitors = nights.flatMap((_, index) =>
-  visitors.filter((visitor) => visitor.day === index + 1).slice(0, visitorsPerNight),
-);
-
-const entryLogsByDay: Record<number, EntryLog[]> = {
-  1: [
-    { time: "19:42", subject: "Lin Anna 203", state: "Out", detail: "Signed out for rehearsal, not yet returned.", tone: "clear" },
-    { time: "20:36", subject: "Zhou Qiming 506", state: "Returned", detail: "Card-game return expected before curfew.", tone: "clear" },
-    { time: "21:00", subject: "Mina Park 208", state: "Out", detail: "Studio class listed until 21:30.", tone: "clear" },
-    { time: "22:04", subject: "Owen Xu 502", state: "Inside", detail: "Case registered upstairs; no visitor pickup logged.", tone: "warning" },
-    { time: "23:12", subject: "Registry margin", state: "Ink shift", detail: "One old tenant line changes shape when a refusal stamp dries.", tone: "warning" },
-  ],
-  2: [
-    { time: "20:30", subject: "Blue Star Repair", state: "Scheduled", detail: "One contractor approved for the fourth-floor electrical box. Company status is not verified.", tone: "clear" },
-    { time: "21:10", subject: "Moon Courier", state: "Scheduled", detail: "Medicine parcel for 302 may be held at the desk after curfew.", tone: "clear" },
-    { time: "21:40", subject: "6F maintenance", state: "Suspended", detail: "No ventilation, wiring, or pipe work may enter sixth floor.", tone: "danger" },
-    { time: "22:18", subject: "Zhao Jun 104", state: "Out", detail: "Office audit delay confirmed by management phone note.", tone: "clear" },
-    { time: "23:31", subject: "Blue Star archive", state: "Closed", detail: "Old business registry says Blue Star Repair dissolved twelve years ago.", tone: "warning" },
-  ],
-  3: [
-    { time: "19:20", subject: "Chen Rui 410", state: "Away", detail: "Hospital night duty; early return requires employer confirmation.", tone: "warning" },
-    { time: "22:52", subject: "Mina Park 208", state: "Inside", detail: "Resident already upstairs; second arrival is a conflict.", tone: "danger" },
-    { time: "23:20", subject: "Wang Yulan 601", state: "Inside", detail: "Old key logged; no seventh-floor destination exists.", tone: "danger" },
-    { time: "23:58", subject: "Desk shift", state: "No relief", detail: "No clerk handoff appears in tonight's rules.", tone: "danger" },
-    { time: "23:59", subject: "Y. Xue", state: "On duty", detail: "Current clerk is already recorded at the desk. A second entry would overwrite the first.", tone: "danger" },
-  ],
-};
-
-const entrySignalByVisitorId: Record<string, string> = {
-  "d1-lin-real": "Lin Anna is due back from rehearsal. No earlier return is recorded.",
-  "d1-lin-fake": "Lin Anna has not signed back in, but the wrong name and appearance still need evidence.",
-  "d1-zhou-real": "Zhou Qiming signed out for cards and is due back around this time.",
-  "d1-zhou-fake": "The ledger has no forgotten-key note, and room 506 later reports Zhou is already inside.",
-  "d1-mina-real": "Mina Park is expected from studio class and has not signed in yet.",
-  "d1-mina-fake": "The badge room 280 does not exist in tonight's ledger.",
-  "d1-guo-real": "Guo Lan had a late client fitting and is not yet marked inside.",
-  "d1-owen-fake": "Owen's case is logged inside 502; a pickup claim conflicts with the ledger.",
-  "d2-han-real": "Blue Star Repair has one valid 20:30 work order for 4F, but the company file is old enough to feel wrong.",
-  "d2-han-fake": "No 23:30 work order exists, no seventh-floor route exists, and the Blue Star name should not still be active.",
-  "d2-li-real": "Li Mei has no elevator use logged and may return by stairs.",
-  "d2-li-fake": "Li Mei already came up by stairs; elevator behavior conflicts with the log.",
-  "d2-courier": "The medicine parcel is scheduled, but the courier should be held at the desk after curfew.",
-  "d2-zhao-real": "Zhao Jun's office audit delay is noted; phone confirmation is required.",
-  "d2-wang-real": "Wang Yulan is returning as a resident, not as maintenance.",
-  "d2-maintenance-6f": "All sixth-floor maintenance entries are suspended tonight.",
-  "d3-chen-fake": "Chen Rui is logged at the hospital until morning.",
-  "d3-sun-real": "Sun Hao has not yet returned from the night kitchen shift.",
-  "d3-mina-fake": "Mina Park is already upstairs; another Mina at the desk is a conflict.",
-  "d3-lin-real": "Lin Anna called ahead about a train delay and is not yet signed in.",
-  "d3-wang-fake": "No room 701 or seventh-floor reading room exists in any log.",
-  "d3-guo-fake": "Guo Lan's workshop line reports she is inside with narrow sleeves.",
-  "d3-owen-visitor": "Noah Xu has no visit entry, and Owen's case is already visible upstairs.",
-  "d3-final-guard": "The ledger already contains Y. Xue on duty; a second clerk entry would make one version official and erase the other.",
-};
-
-function getResident(id?: string) {
-  return residents.find((resident) => resident.id === id);
-}
-
+import {
+  Decision,
+  ToolName,
+  DeskView,
+  ChecklistKey,
+  EvidenceKey,
+  VisitorType,
+  QuestionCategory,
+  VisitorMood,
+  GameMode,
+  ResidentStatus,
+  OfficeUpgradeId,
+  Resident,
+  Appointment,
+  Visitor,
+  HistoryEntry,
+  EvidenceOption,
+  EntryLog,
+  PhoneLine,
+  QuestionOption,
+  checklistItems,
+  evidenceOptions,
+  emptyToolCounts,
+  visitorTypeLabels,
+  decisionLabels,
+  residents,
+  appointments,
+  playableNightCount,
+  visitorsPerNight,
+  nights,
+  visitors,
+  residentIdByName,
+  getResident,
+  generatedVisitors,
+  playableVisitors,
+  entryLogsByDay,
+  entrySignalByVisitorId,
+  officeUpgrades,
+  residentRelationships,
+  cctvSceneAssets,
+} from "@/data/midnightRegistryData";
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
 }
@@ -1336,42 +326,337 @@ function makeVisitorDocuments(visitor: Visitor) {
   return documents;
 }
 
+
+function TypewriterText({ text }: { text: string }) {
+  const [shown, setShown] = useState("");
+
+  useEffect(() => {
+    setShown("");
+    let index = 0;
+
+    const timer = setInterval(() => {
+      index += 1;
+      setShown(text.slice(0, index));
+
+      if (index >= text.length) {
+        clearInterval(timer);
+      }
+    }, 24);
+
+    return () => clearInterval(timer);
+  }, [text]);
+
+  return <p className="registry-dialogue">{shown}</p>;
+}
+
+
+type ScreenEffect = null | "allow" | "refuse" | "security" | "wait" | "wrong";
+type ResourcePool = Record<ToolName, number>;
+type HoldReveal = {
+  visitorId: string;
+  phase: "waiting" | "revealed";
+  text: string;
+  evidence: EvidenceKey[];
+};
+type NightSettlement = {
+  night: number;
+  correct: number;
+  total: number;
+  replaced: number;
+  credits: number;
+};
+
+const baseResourcesByMode: Record<GameMode, ResourcePool> = {
+  story: { phone: 10, scanner: 6, camera: 10, question: 18 },
+  challenge: { phone: 4, scanner: 3, camera: 4, question: 8 },
+  endless: { phone: 6, scanner: 4, camera: 6, question: 12 },
+};
+
+function makeResidentStatusMap(): Record<string, ResidentStatus> {
+  return Object.fromEntries(residents.map((resident) => [resident.id, "active"])) as Record<string, ResidentStatus>;
+}
+
+function getResourcePool(
+  mode: GameMode,
+  perk: "coffee" | "booster" | "override" | "repairkit" | null,
+  upgrades: OfficeUpgradeId[],
+): ResourcePool {
+  const resources = { ...baseResourcesByMode[mode] };
+  if (perk === "repairkit") resources.phone += 2;
+  if (perk === "booster") resources.scanner += 2;
+  if (upgrades.includes("hotline")) resources.phone += 2;
+  if (upgrades.includes("camera-buffer")) resources.camera += 2;
+  if (upgrades.includes("scanner-capacitor")) resources.scanner += 2;
+  if (upgrades.includes("archive-lock")) resources.question = Math.max(1, resources.question - 2);
+  return resources;
+}
+
+function getHoldReveal(visitor: Visitor): { text: string; evidence: EvidenceKey[] } {
+  if (visitor.isMirror) {
+    return {
+      text: "During the hold, the room calls back while the visitor is still at the glass. CCTV then catches the visitor's reflection moving before the body does.",
+      evidence: ["phone", "appearance", "ledger"],
+    };
+  }
+
+  if (visitor.expectedAction === "wait") {
+    return {
+      text: "The callback arrives after the hold: the visitor is legitimate, but tonight's rules require the parcel, badge, or person to remain at the desk.",
+      evidence: ["phone", "rules", "appointment"],
+    };
+  }
+
+  return {
+    text: "Nothing changes during the hold. The existing archive, schedule, and lived details remain the strongest evidence.",
+    evidence: ["schedule"],
+  };
+}
+
 export function MidnightRegistryGame() {
   const { t, toggleLanguage } = useTranslation();
+  const [gameMode, setGameMode] = useState<GameMode>("story");
+  const [endlessRound, setEndlessRound] = useState(0);
   const [dayIndex, setDayIndex] = useState(0);
   const [visitorIndex, setVisitorIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [safety, setSafety] = useState(100);
   const [reputation, setReputation] = useState(100);
   const [sanity, setSanity] = useState(100);
-  const [deskView, setDeskView] = useState<DeskView>("documents");
+  const [deskView, setDeskView] = useState<DeskView | "cctv" | "phone">("documents");
   const [activeDocument, setActiveDocument] = useState("claim");
+  const [documentMotionKey, setDocumentMotionKey] = useState(0);
   const [checkedItems, setCheckedItems] = useState<ChecklistKey[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceKey[]>([]);
   const [toolCounts, setToolCounts] = useState<Record<ToolName, number>>({ ...emptyToolCounts });
   const [toolLog, setToolLog] = useState("The desk lamp hums. Every stamp writes a person into the registry. Check paper, people, memory, and rules before you make anyone official.");
   const [visitorMood, setVisitorMood] = useState<VisitorMood>("idle");
+  const [screenEffect, setScreenEffect] = useState<ScreenEffect>(null);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ decision: Decision; correct: boolean; visitor: Visitor; consequences: string[] } | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [ending, setEnding] = useState<string | null>(null);
+  const [nightSettlement, setNightSettlement] = useState<NightSettlement | null>(null);
+  const [holdReveal, setHoldReveal] = useState<HoldReveal | null>(null);
+  const [visitorWaitMs, setVisitorWaitMs] = useState(0);
+  const [resourcePool, setResourcePool] = useState<ResourcePool>(() => getResourcePool("story", null, []));
+  const [residentStatuses, setResidentStatuses] = useState<Record<string, ResidentStatus>>(makeResidentStatusMap);
 
-  const currentNight = nights[dayIndex];
-  const dayVisitors = useMemo(() => playableVisitors.filter((visitor) => visitor.day === dayIndex + 1), [dayIndex]);
+  // V3 & V4 States
+  const [gamePhase, setGamePhase] = useState<"prep" | "shift">("prep");
+  const [prepPoints, setPrepPoints] = useState(100);
+  const [decryptedFiles, setDecryptedFiles] = useState<string[]>([]);
+  const [selectedPerk, setSelectedPerk] = useState<"coffee" | "booster" | "override" | "repairkit" | null>(null);
+  const [upgradeCredits, setUpgradeCredits] = useState(0);
+  const [ownedUpgrades, setOwnedUpgrades] = useState<OfficeUpgradeId[]>([]);
+  const [repairTarget, setRepairTarget] = useState<string | null>(null);
+  const [repairSources, setRepairSources] = useState<string[]>([]);
+
+  // Equipment failures state
+  const [failures, setFailures] = useState<Record<ToolName | "lock", boolean>>({
+    phone: false,
+    scanner: false,
+    camera: false,
+    question: false,
+    lock: false,
+  });
+  const [activeRepairTool, setActiveRepairTool] = useState<ToolName | "lock" | null>(null);
+
+  // Switchboard and CCTV state
+  const [cctvChannel, setCctvChannel] = useState(1);
+  const [totalToolUsage, setTotalToolUsage] = useState<Record<ToolName, number>>({
+    phone: 0,
+    scanner: 0,
+    camera: 0,
+    question: 0,
+  });
+
+  // Repair minigame sub-states
+  const [phoneWires, setPhoneWires] = useState<{ left: string[]; right: string[]; connections: Record<string, string> }>({
+    left: ["Red", "Blue", "Yellow"],
+    right: ["Blue", "Yellow", "Red"],
+    connections: {},
+  });
+  const [selectedLeftWire, setSelectedLeftWire] = useState<string | null>(null);
+  const [cctvFrequency, setCctvFrequency] = useState(50.0);
+  const [cctvTargetFrequency, setCctvTargetFrequency] = useState(74.5);
+  const [scannerProgress, setScannerProgress] = useState(0);
+  const [lockSequence, setLockSequence] = useState("");
+  const [lockTargetCode, setLockTargetCode] = useState("4291");
+
+  const currentNight =
+    gameMode === "endless"
+      ? {
+          title: `Endless Shift ${endlessRound + 1}`,
+          subtitle: "The Registry Never Closes",
+          rules: nights[Math.min(endlessRound, nights.length - 1)].rules,
+        }
+      : nights[dayIndex];
+  const dayVisitors = useMemo(() => {
+    if (gameMode !== "endless") {
+      return playableVisitors.filter((candidate) => candidate.day === dayIndex + 1);
+    }
+
+    return Array.from({ length: visitorsPerNight }, (_, index) => {
+      const source = playableVisitors[(endlessRound * visitorsPerNight + index) % playableVisitors.length];
+      return {
+        ...source,
+        id: `endless-${endlessRound}-${index}-${source.id}`,
+        day: endlessRound + 1,
+        arrival: `${String(20 + Math.floor(index / 3)).padStart(2, "0")}:${String(8 + index * 6).padStart(2, "0")}`,
+        threat: source.threat + endlessRound * 2,
+      };
+    });
+  }, [dayIndex, endlessRound, gameMode]);
   const visitor = dayVisitors[visitorIndex];
   const resident = getResident(visitor?.sourceResidentId);
   const visitorType = visitor ? getVisitorType(visitor) : "visitor";
   const phoneLines = useMemo(() => (visitor ? getPhoneLines(visitor) : []), [visitor]);
   const questionOptions = useMemo(() => (visitor ? getQuestionOptions(visitor, resident) : []), [visitor, resident]);
-  const entryLogs = entryLogsByDay[dayIndex + 1] ?? [];
+  const entryLogDay = Math.min(gameMode === "endless" ? endlessRound + 1 : dayIndex + 1, 7);
+  const entryLogs = entryLogsByDay[entryLogDay] ?? [];
   const entrySignal = visitor ? getEntrySignal(visitor) : "";
   const pressure = 100 - sanity;
   const queuePressure = dayVisitors.length ? Math.round(((visitorIndex + 1) / dayVisitors.length) * 100) : 0;
   const visitorDocuments = useMemo(() => (visitor ? makeVisitorDocuments(visitor) : []), [visitor]);
   const selectedDocument = visitorDocuments.find((document) => document.id === activeDocument) ?? visitorDocuments[0];
+  const mostUsedTool = useMemo(() => {
+    const entries = Object.entries(totalToolUsage) as [ToolName, number][];
+    const maxUsage = Math.max(...entries.map(([, count]) => count));
+    if (maxUsage === 0) return null;
+    return entries.find(([, count]) => count === maxUsage)?.[0] ?? null;
+  }, [totalToolUsage]);
+  const learningImpostorActive = (dayIndex >= 5 || (gameMode === "endless" && endlessRound >= 5)) && visitor.isMirror;
+  const storyScenes = [
+    "/assets/midnight-registry/cctv/front-gate.png",
+    "/assets/midnight-registry/cctv/blue-star-van.png",
+    "/assets/midnight-registry/cctv/security-booth.png",
+    "/assets/midnight-registry/cctv/impossible-stairwell.png",
+    "/assets/midnight-registry/cctv/archive-room.png",
+    "/assets/midnight-registry/cctv/impossible-hallway-shadow.png",
+    "/assets/midnight-registry/cctv/clerk-counter.png",
+  ];
+  const storyScene = storyScenes[(gameMode === "endless" ? endlessRound : dayIndex) % storyScenes.length];
+
+  // Scanner calibration bar effect
+  useEffect(() => {
+    if (activeRepairTool !== "scanner") return;
+    let direction = 1;
+    const interval = setInterval(() => {
+      setScannerProgress((prev) => {
+        let next = prev + direction * 4;
+        if (next >= 100) {
+          next = 100;
+          direction = -1;
+        } else if (next <= 0) {
+          next = 0;
+          direction = 1;
+        }
+        return next;
+      });
+    }, 40);
+    return () => clearInterval(interval);
+  }, [activeRepairTool]);
+
+  useEffect(() => {
+    setVisitorWaitMs(0);
+  }, [visitor.id]);
+
+  useEffect(() => {
+    if (gamePhase !== "shift" || feedback || ending || holdReveal) return;
+    const timer = window.setInterval(() => setVisitorWaitMs((value) => value + 1000), 1000);
+    return () => window.clearInterval(timer);
+  }, [ending, feedback, gamePhase, holdReveal]);
+
+  useEffect(() => {
+    if (feedback || holdReveal || visitorMood === "revealed" || visitorMood === "leaving") return;
+    if (visitorWaitMs >= 45000) {
+      setVisitorMood("angry");
+    } else if (visitorWaitMs >= 30000) {
+      setVisitorMood("suspicious");
+    } else if (visitorWaitMs >= 20000) {
+      setVisitorMood("waiting");
+    }
+  }, [feedback, holdReveal, visitorMood, visitorWaitMs]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "f") return;
+      if (document.fullscreenElement) {
+        void document.exitFullscreen();
+      } else {
+        void document.documentElement.requestFullscreen();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const gameWindow = window;
+
+    gameWindow.render_game_to_text = () =>
+      JSON.stringify({
+        coordinateSystem: "DOM desk interface; top-left origin; screen sections flow downward.",
+        mode: gameMode,
+        phase: gamePhase,
+        night: gameMode === "endless" ? endlessRound + 1 : dayIndex + 1,
+        visitor: {
+          index: visitorIndex + 1,
+          total: dayVisitors.length,
+          id: visitor.id,
+          name: visitor.name,
+          room: visitor.room,
+          mood: visitorMood,
+          waitMs: visitorWaitMs,
+        },
+        deskView,
+        checkedItems,
+        selectedEvidence,
+        resources: resourcePool,
+        failures,
+        stats: { score, safety, reputation, sanity },
+        feedback: feedback ? { decision: feedback.decision, correct: feedback.correct } : null,
+        hold: holdReveal?.phase ?? null,
+        ending: ending?.split(":")[0] ?? null,
+      });
+    gameWindow.advanceTime = (ms = 1000) => {
+      setVisitorWaitMs((value) => value + Math.max(0, ms));
+    };
+
+    return () => {
+      delete gameWindow.render_game_to_text;
+      delete gameWindow.advanceTime;
+    };
+  }, [
+    checkedItems,
+    dayIndex,
+    dayVisitors.length,
+    deskView,
+    endlessRound,
+    ending,
+    failures,
+    feedback,
+    gameMode,
+    gamePhase,
+    holdReveal,
+    reputation,
+    resourcePool,
+    safety,
+    sanity,
+    score,
+    selectedEvidence,
+    visitor.id,
+    visitor.name,
+    visitor.room,
+    visitorIndex,
+    visitorMood,
+    visitorWaitMs,
+  ]);
 
   const resetDesk = () => {
     setDeskView("documents");
     setActiveDocument("claim");
+    setDocumentMotionKey((key) => key + 1);
     setCheckedItems([]);
     setSelectedEvidence([]);
     setToolCounts({ ...emptyToolCounts });
@@ -1401,57 +686,103 @@ export function MidnightRegistryGame() {
   };
 
   const useTool = (tool: ToolName) => {
-    if (!visitor || feedback) return;
+    if (!visitor || feedback || holdReveal) return;
     const limit = tool === "phone" ? phoneLines.length : tool === "question" ? 3 : 1;
     if (toolCounts[tool] >= limit) {
       setToolLog(tool === "phone" ? "The switchboard refuses another call for this visitor." : tool === "question" ? "The visitor will not answer another question." : "That check is already logged on the form.");
       return;
     }
+    if (resourcePool[tool] <= 0) {
+      setToolLog(`No ${tool} resources remain for this shift. Use the archive, rules, ledger, and lived details.`);
+      return;
+    }
 
-    const result = tool === "phone" ? phoneLines[toolCounts.phone]?.result ?? visitor.phone : visitor[tool];
+    if (failures[tool]) {
+      if (tool === "phone") {
+        setPhoneWires({
+          left: ["Red", "Blue", "Yellow"],
+          right: ["Blue", "Yellow", "Red"].sort(() => Math.random() - 0.5),
+          connections: {},
+        });
+        setSelectedLeftWire(null);
+      } else if (tool === "camera") {
+        setCctvFrequency(50.0);
+        setCctvTargetFrequency(parseFloat((60 + Math.random() * 30).toFixed(1)));
+      } else if (tool === "scanner") {
+        setScannerProgress(0);
+      }
+      setActiveRepairTool(tool);
+      return;
+    }
+
+    const baseResult = tool === "phone" ? phoneLines[toolCounts.phone]?.result ?? visitor.phone : visitor[tool];
+    const result =
+      tool === "scanner" && learningImpostorActive && mostUsedTool === "scanner"
+        ? "The scan is perfectly clean. Its timestamp matches the moment you usually trust the scanner most."
+        : baseResult;
     setToolCounts((counts) => ({ ...counts, [tool]: counts[tool] + 1 }));
-    setToolLog(tool === "phone" ? `${phoneLines[toolCounts.phone]?.label}: ${result}` : result);
-    if (tool === "phone") {
-      setVisitorMood("called");
-      setCheckedItems((items) => addUnique(items, "phone"));
-      if (result.includes("already") || result.includes("contradicts") || result.includes("No relief")) {
-        setSelectedEvidence((items) => addUnique(addUnique(items, "phone"), "ledger"));
+    setResourcePool((resources) => ({ ...resources, [tool]: Math.max(0, resources[tool] - 1) }));
+    setActiveTool(tool);
+    setToolLog(`${tool} running...`);
+
+    setTimeout(() => {
+      setToolLog(tool === "phone" ? `${phoneLines[toolCounts.phone]?.label}: ${result}` : result);
+      setActiveTool(null);
+      if (tool === "phone") {
+        setVisitorMood("nervous");
+        setCheckedItems((items) => addUnique(items, "phone"));
+        if (result.includes("already") || result.includes("contradicts") || result.includes("No relief")) {
+          setSelectedEvidence((items) => addUnique(addUnique(items, "phone"), "ledger"));
+        }
       }
-    }
-    if (tool === "scanner") {
-      setVisitorMood("watched");
-      setCheckedItems((items) => addUnique(items, "documents"));
-      if (result.includes("fails") || result.includes("mismatch") || result.includes("wrong") || result.includes("corrupted")) {
-        setSelectedEvidence((items) => addUnique(items, "id"));
+      if (tool === "scanner") {
+        setVisitorMood("waiting");
+        setCheckedItems((items) => addUnique(items, "documents"));
+        if (result.includes("fails") || result.includes("mismatch") || result.includes("wrong") || result.includes("corrupted")) {
+          setSelectedEvidence((items) => addUnique(items, "id"));
+        }
       }
-    }
-    if (tool === "camera") {
-      setVisitorMood("watched");
-      setCheckedItems((items) => addUnique(items, "appearance"));
-      if (result.includes("wrong") || result.includes("not") || result.includes("empty") || result.includes("anomaly")) {
-        setSelectedEvidence((items) => addUnique(items, "appearance"));
+      if (tool === "camera") {
+        setVisitorMood("waiting");
+        setCheckedItems((items) => addUnique(items, "appearance"));
+        if (result.includes("wrong") || result.includes("not") || result.includes("empty") || result.includes("anomaly")) {
+          setSelectedEvidence((items) => addUnique(items, "appearance"));
+        }
       }
-    }
-    if (tool === "question") {
-      setVisitorMood("cornered");
-    }
-    if (result.includes("scream") || result.includes("wet tapping") || result.includes("calls itself") || result.includes("hungry")) {
-      setSanity((value) => clamp(value - 4));
-    }
+      if (tool === "question") {
+        setVisitorMood("suspicious");
+      }
+      if (result.includes("scream") || result.includes("wet tapping") || result.includes("calls itself") || result.includes("hungry")) {
+        setSanity((value) => clamp(value - 4));
+      }
+    }, 900);
   };
 
   const askQuestion = (question: QuestionOption) => {
-    if (!visitor || feedback) return;
+    if (!visitor || feedback || holdReveal) return;
     if (toolCounts.question >= 3) {
       setToolLog("The visitor will not answer another question.");
       return;
     }
+    if (resourcePool.question <= 0) {
+      setToolLog("The interview deck is exhausted for this shift.");
+      return;
+    }
 
     setToolCounts((counts) => ({ ...counts, question: counts.question + 1 }));
-    setToolLog(`${question.prompt} ${question.answer} ${question.signal}`);
-    setVisitorMood(question.category === "trap" ? "cornered" : "watched");
+    setResourcePool((resources) => ({ ...resources, question: Math.max(0, resources.question - 1) }));
+    const learnedAnswer =
+      learningImpostorActive && mostUsedTool === "question"
+        ? "The answer matches your most repeated question exactly, including the same pause you accepted earlier."
+        : question.answer;
+    const learnedSignal =
+      learningImpostorActive && mostUsedTool === "question"
+        ? "No contradiction appears because this impostor prepared for the interview pattern you use most."
+        : question.signal;
+    setToolLog(`${question.prompt} ${learnedAnswer} ${learnedSignal}`);
+    setVisitorMood(question.category === "trap" ? "suspicious" : "nervous");
     setCheckedItems((items) => addUnique(items, "archive"));
-    if (question.category === "trap" || question.category === "relation") {
+    if ((question.category === "trap" || question.category === "relation") && !(learningImpostorActive && mostUsedTool === "question")) {
       setSelectedEvidence((items) => addUnique(items, "behavior"));
     }
     if (question.category === "situation") {
@@ -1459,26 +790,140 @@ export function MidnightRegistryGame() {
     }
   };
 
-  const decide = (decision: Decision) => {
-    if (!visitor || feedback) return;
+  // Switchboard Wires Mini-game clicks
+  const handleLeftWireClick = (color: string) => {
+    setSelectedLeftWire(color);
+  };
+
+  const handleRightWireClick = (color: string) => {
+    if (!selectedLeftWire) return;
+    if (selectedLeftWire === color) {
+      setPhoneWires((prev) => {
+        const newConns = { ...prev.connections, [color]: color };
+        if (Object.keys(newConns).length === 3) {
+          setTimeout(() => {
+            setFailures((f) => ({ ...f, phone: false }));
+            setActiveRepairTool(null);
+            setToolLog("Phone system switchboard synchronized. Line restored.");
+          }, 300);
+        }
+        return { ...prev, connections: newConns };
+      });
+    }
+    setSelectedLeftWire(null);
+  };
+
+  // CCTV frequency mini-game tuner
+  const tuneCctv = () => {
+    if (Math.abs(cctvFrequency - cctvTargetFrequency) < 1.5) {
+      setFailures((f) => ({ ...f, camera: false }));
+      setActiveRepairTool(null);
+      setToolLog("CCTV channels frequency synchronized. Feeds restored.");
+    } else {
+      setToolLog("Frequency mismatch. Tune closer to the target frequency.");
+    }
+  };
+
+  // Scanner calibration mini-game button
+  const calibrateScanner = () => {
+    if (scannerProgress >= 45 && scannerProgress <= 55) {
+      setFailures((f) => ({ ...f, scanner: false }));
+      setActiveRepairTool(null);
+      setToolLog("ID scanner laser calibrated successfully.");
+    } else {
+      setToolLog(`Calibration failed at ${scannerProgress}%. Laser must land on the green sweet spot (45-55%).`);
+    }
+  };
+
+  // Lock keypad numpad click
+  const pressLockKey = (num: string) => {
+    setLockSequence((prev) => {
+      const next = prev + num;
+      if (next === lockTargetCode) {
+        setTimeout(() => {
+          setFailures((f) => ({ ...f, lock: false }));
+          setActiveRepairTool(null);
+          setToolLog("Lobby door backup lock sequence accepted. Lock released.");
+        }, 300);
+      } else if (next.length >= 4) {
+        return "";
+      }
+      return next;
+    });
+  };
+
+  const resolveDecision = (decision: Decision, evidenceReasons = selectedEvidence) => {
     const correct = decision === visitor.expectedAction;
     const allowedMirror = decision === "allow" && visitor.isMirror;
     const blockedValidHuman = !correct && decision !== "allow" && !visitor.isMirror && visitor.expectedAction === "allow";
     const paperworkBonus = Math.min(checkedItems.length, checklistItems.length) * 6;
-    const evidenceBonus = correct ? Math.min(selectedEvidence.length, 4) * 7 : 0;
+    const evidenceBonus = correct ? Math.min(evidenceReasons.length, 4) * 7 : 0;
     const rushedPenalty = Math.max(0, 3 - checkedItems.length) * 8;
-    const consequences = getConsequences(visitor, decision, correct, selectedEvidence.length);
+    const consequences = getConsequences(visitor, decision, correct, evidenceReasons.length);
 
-    setVisitorMood(decision === "security" ? "alarmed" : visitor.isMirror && !correct ? "revealed" : "idle");
+    setVisitorMood(decision === "security" ? "revealed" : visitor.isMirror && !correct ? "revealed" : "idle");
     setFeedback({ decision, correct, visitor, consequences });
     setHistory((entries) => [
       ...entries,
-      { visitor: visitor.name, room: visitor.room, decision, correct, mirror: visitor.isMirror, consequence: consequences[0] },
+      {
+        day: gameMode === "endless" ? endlessRound + 1 : dayIndex + 1,
+        visitor: visitor.name,
+        room: visitor.room,
+        decision,
+        correct,
+        mirror: visitor.isMirror,
+        consequence: consequences[0],
+      },
     ]);
     setScore((value) => value + (correct ? 100 + visitor.threat + paperworkBonus + evidenceBonus : -70 - rushedPenalty));
     setSafety((value) => clamp(value - (allowedMirror ? 26 : correct ? 0 : 8)));
     setReputation((value) => clamp(value - (blockedValidHuman ? 18 : decision === "security" && !visitor.isMirror && !correct ? 14 : correct ? 0 : 6)));
     setSanity((value) => clamp(value - (correct ? Math.floor(visitor.threat / 7) : 14 + Math.floor(visitor.threat / 5))));
+
+    if (visitor.sourceResidentId) {
+      if (allowedMirror) {
+        setResidentStatuses((statuses) => ({ ...statuses, [visitor.sourceResidentId!]: "replaced" }));
+      } else if (blockedValidHuman) {
+        setResidentStatuses((statuses) => ({ ...statuses, [visitor.sourceResidentId!]: "stranded" }));
+      } else if (correct && decision === "allow") {
+        setResidentStatuses((statuses) => ({ ...statuses, [visitor.sourceResidentId!]: "active" }));
+      }
+    }
+    setScreenEffect(null);
+  };
+
+  const decide = (decision: Decision) => {
+    if (!visitor || feedback || holdReveal) return;
+    if (failures.lock) {
+      setLockSequence("");
+      setLockTargetCode(String(Math.floor(1000 + Math.random() * 9000)));
+      setActiveRepairTool("lock");
+      return;
+    }
+
+    setScreenEffect(decision === "reject" ? "refuse" : decision);
+    setVisitorMood(decision === "allow" ? "leaving" : decision === "security" ? "revealed" : decision === "reject" ? "leaving" : "angry");
+
+    if (decision === "wait") {
+      const reveal = getHoldReveal(visitor);
+      setHoldReveal({ visitorId: visitor.id, phase: "waiting", text: "The registry clock advances while the visitor remains outside.", evidence: [] });
+      window.setTimeout(() => {
+        setSelectedEvidence((items) => reveal.evidence.reduce((next, key) => addUnique(next, key), items));
+        setCheckedItems((items) => addUnique(addUnique(items, "phone"), "ledger"));
+        setToolLog(reveal.text);
+        setHoldReveal({ visitorId: visitor.id, phase: "revealed", text: reveal.text, evidence: reveal.evidence });
+      }, 900);
+      return;
+    }
+
+    window.setTimeout(() => resolveDecision(decision), 750);
+  };
+
+  const recordHoldDecision = () => {
+    if (!holdReveal || holdReveal.phase !== "revealed") return;
+    const evidenceReasons = holdReveal.evidence.reduce((items, key) => addUnique(items, key), selectedEvidence);
+    setHoldReveal(null);
+    resolveDecision("wait", evidenceReasons);
   };
 
   const continueGame = () => {
@@ -1486,41 +931,118 @@ export function MidnightRegistryGame() {
     resetDesk();
 
     if (visitorIndex + 1 < dayVisitors.length) {
+      let failedSystem: ToolName | "lock" | null = null;
+      const progressionNight = gameMode === "endless" ? endlessRound : dayIndex;
+      if (progressionNight >= 2) {
+        const roll = Math.random();
+        const threshold = gameMode === "challenge" ? 0.35 : progressionNight === 2 ? 0.15 : progressionNight === 3 ? 0.2 : 0.25;
+        if (roll < threshold) {
+          const pool: (ToolName | "lock")[] = [];
+          if (!failures.phone && selectedPerk !== "repairkit") pool.push("phone");
+          if (!failures.scanner && selectedPerk !== "booster") pool.push("scanner");
+          if (!failures.camera) pool.push("camera");
+          if (!failures.lock && selectedPerk !== "override") pool.push("lock");
+          if (pool.length > 0) {
+            failedSystem = pool[Math.floor(Math.random() * pool.length)];
+          }
+        }
+      }
+
+      if (failedSystem) {
+        setFailures((currentFailures) => ({ ...currentFailures, [failedSystem!]: true }));
+        setToolLog(`WARNING: Critical ${failedSystem.toUpperCase()} failure. Manual calibration required.`);
+      }
       setVisitorIndex((index) => index + 1);
       return;
     }
 
-    if (dayIndex + 1 < nights.length) {
-      setDayIndex((index) => index + 1);
-      setVisitorIndex(0);
-      setSanity((value) => clamp(value + 10));
+    const settlementDay = gameMode === "endless" ? endlessRound + 1 : dayIndex + 1;
+    const nightEntries = history.filter((entry) => entry.day === settlementDay);
+    const correctCalls = nightEntries.filter((entry) => entry.correct).length;
+    const replacedResidents = Object.values(residentStatuses).filter((status) => status === "replaced").length;
+    const earnedCredits = correctCalls >= Math.ceil(dayVisitors.length * 0.75) ? 2 : 1;
+
+    if (gameMode === "endless" || dayIndex + 1 < nights.length) {
+      setUpgradeCredits((credits) => credits + earnedCredits);
+      setNightSettlement({
+        night: settlementDay,
+        correct: correctCalls,
+        total: dayVisitors.length,
+        replaced: replacedResidents,
+        credits: earnedCredits,
+      });
       return;
     }
 
-    const mirrorMistakes = history.filter((entry) => entry.mirror && entry.decision === "allow").length + (feedback?.visitor.isMirror && feedback.decision === "allow" ? 1 : 0);
-    const wrongCalls = history.filter((entry) => !entry.correct).length + (feedback && !feedback.correct ? 1 : 0);
-    const finalScore = score + (feedback?.correct ? 100 + feedback.visitor.threat : -70);
+    const mirrorMistakes = history.filter((entry) => entry.mirror && entry.decision === "allow").length;
+    const wrongCalls = history.filter((entry) => !entry.correct).length;
+    const finalScore = score;
 
-    if (mirrorMistakes === 0 && wrongCalls <= 2 && finalScore >= 1900) {
-      setEnding("Good Ending: The duplicate is blocked and enough real residents remain anchored. At dawn, the registry stops updating and your name is crossed off the hiring notice.");
-    } else if (mirrorMistakes <= 2 && safety >= 45) {
-      setEnding("Survival Ending: You last until morning, but too many residents have been rewritten. They greet you politely, and every greeting is slightly wrong.");
+    const isBadCallClerk = feedback?.visitor.room === "000" && feedback?.decision === "allow";
+    if (isBadCallClerk || safety <= 0 || reputation <= 0 || sanity <= 0) {
+      setEnding("Bad Ending: The replacement is registered. Morning finds a new clerk sitting at your desk inside, while the real Y. Xue stands outside in the rain, knocking on the glass.");
+    } else if (mirrorMistakes === 0 && wrongCalls <= 2 && finalScore >= 2500) {
+      setEnding("Good Ending: You block the duplicate, verify all resident files, and survive the seven nights. At dawn, you walk out of the lobby with your name crossed off the hiring notice, free of the registry's cycle.");
     } else {
-      setEnding("Bad Ending: The replacement is registered. Morning finds a new clerk at your desk while the real Y. Xue knocks from outside the glass.");
+      setEnding("Survival Ending: You survive the week, but too many duplicates got through. The building continues, but everyone greets you with a polite nod and a smile that is slightly off-pitch.");
+    }
+  };
+
+  const continueAfterSettlement = () => {
+    setNightSettlement(null);
+    setVisitorIndex(0);
+    setSanity((value) => clamp(value + (selectedPerk === "coffee" ? 30 : 15)));
+    setGamePhase("prep");
+    setPrepPoints(ownedUpgrades.includes("archive-lock") ? 120 : 100);
+    setSelectedPerk(null);
+    setRepairTarget(null);
+    setRepairSources([]);
+    if (gameMode === "endless") {
+      setEndlessRound((round) => round + 1);
+    } else {
+      setDayIndex((index) => index + 1);
     }
   };
 
   const resetGame = () => {
+    setGameMode("story");
+    setEndlessRound(0);
     setDayIndex(0);
     setVisitorIndex(0);
     setScore(0);
     setSafety(100);
     setReputation(100);
     setSanity(100);
+    setGamePhase("prep");
+    setPrepPoints(100);
+    setSelectedPerk(null);
+    setDecryptedFiles([]);
+    setUpgradeCredits(0);
+    setOwnedUpgrades([]);
+    setRepairTarget(null);
+    setRepairSources([]);
+    setResourcePool(getResourcePool("story", null, []));
+    setResidentStatuses(makeResidentStatusMap());
+    setFailures({
+      phone: false,
+      scanner: false,
+      camera: false,
+      question: false,
+      lock: false,
+    });
+    setTotalToolUsage({
+      phone: 0,
+      scanner: 0,
+      camera: 0,
+      question: 0,
+    });
     resetDesk();
     setFeedback(null);
     setHistory([]);
     setEnding(null);
+    setNightSettlement(null);
+    setHoldReveal(null);
+    setVisitorWaitMs(0);
   };
 
   if (!visitor) {
@@ -1528,22 +1050,310 @@ export function MidnightRegistryGame() {
   }
 
   const portraitAsset = getVisitorAsset(visitor);
+  const isCorrupted = (dayIndex >= 4 || (gameMode === "endless" && endlessRound >= 4)) && resident && !decryptedFiles.includes(resident.id);
+
+  // Daytime Preparation Screen Render Phase
+  if (gamePhase === "prep") {
+    const nextNight = currentNight;
+    const repairResident = getResident(repairTarget ?? undefined);
+    const archiveRepairActive = dayIndex >= 4 || (gameMode === "endless" && endlessRound >= 4);
+    return (
+      <main className="registry-shell registry-shell--prep registry-animation--prep-open">
+        <section className="registry-hero">
+          <img className="registry-story-scene" src={storyScene} alt="" aria-hidden="true" />
+          <div className="registry-hero__content">
+            <span>Moonshadow Apartments</span>
+            <h1>Daytime Prep Desk</h1>
+            <p>Daytime preparation shift. Read briefings, calibrate your equipment, and restore corrupted sectors before curfew begins.</p>
+          </div>
+        </section>
+
+        <section className="registry-dashboard" style={{ maxWidth: "800px", margin: "0 auto" }}>
+          <header className="registry-topbar" style={{ display: "block", textAlign: "center", borderBottom: "1px solid rgba(237, 194, 112, 0.28)" }}>
+            <h2>Shift Briefing: {nextNight.title}</h2>
+            <p style={{ color: "#eedcb2", fontStyle: "italic", fontSize: "0.9rem", marginTop: "4px" }}>"{nextNight.subtitle}"</p>
+          </header>
+
+          {history.length === 0 ? (
+            <article className="registry-prep-mode" aria-label="Game mode selection">
+              <header>
+                <span>Shift contract</span>
+                <h3>Select Registry Mode</h3>
+              </header>
+              <div>
+                {[
+                  ["story", "Seven-Night Story", "Authored escalation, daytime repair, upgrades, and four endings."],
+                  ["challenge", "Challenge: Blackout", "Seven nights with severe tool limits and more frequent equipment failures."],
+                  ["endless", "Endless Shift", "Eight-case rounds loop forever while threat and pressure continue rising."],
+                ].map(([id, name, description]) => (
+                  <button
+                    aria-pressed={gameMode === id}
+                    key={id}
+                    onClick={() => {
+                      const nextMode = id as GameMode;
+                      setGameMode(nextMode);
+                      setResourcePool(getResourcePool(nextMode, selectedPerk, ownedUpgrades));
+                    }}
+                    type="button"
+                  >
+                    <strong>{name}</strong>
+                    <span>{description}</span>
+                  </button>
+                ))}
+              </div>
+            </article>
+          ) : null}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", padding: "18px 0" }}>
+            <article className="registry-paper registry-prep-card" style={{ padding: "16px", minHeight: "220px" }}>
+              <header style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "6px", marginBottom: "12px" }}>
+                <h4 style={{ margin: 0, color: "#eedcb2" }}>Tonight's Curfew Rules</h4>
+              </header>
+              <ol className="registry-rules" style={{ paddingLeft: "20px", margin: 0 }}>
+                {nextNight.rules.map((rule) => (
+                  <li key={rule} style={{ marginBottom: "6px", fontSize: "0.85rem" }}>{rule}</li>
+                ))}
+              </ol>
+            </article>
+
+            <article className="registry-paper registry-prep-card" style={{ padding: "16px", minHeight: "220px" }}>
+              <header style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "6px", marginBottom: "12px" }}>
+                <h4 style={{ margin: 0, color: "#eedcb2" }}>Select Desk Perk</h4>
+              </header>
+              <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: "12px" }}>Choose one device bypass perk for tonight's shift:</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {[
+                  ["coffee", "fa-mug-hot", "Sanity Coffee", "Restores +30 Stability between shifts."],
+                  ["booster", "fa-bolt", "ID Laser Booster", "Protects ID Scanner from malfunctions."],
+                  ["override", "fa-lock-open", "Manual Lock Override", "Protects Door Lock from jamming."],
+                  ["repairkit", "fa-toolbox", "Switchboard Kit", "Protects Phone Line from dropouts."],
+                ].map(([id, icon, name, desc]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSelectedPerk(id as Exclude<typeof selectedPerk, null>)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "8px 12px",
+                      background: selectedPerk === id ? "rgba(237, 194, 112, 0.18)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${selectedPerk === id ? "#edc270" : "rgba(255,255,255,0.1)"}`,
+                      borderRadius: "6px",
+                      color: "white",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <i className={`fa-solid ${icon}`} style={{ color: selectedPerk === id ? "#edc270" : "rgba(255,255,255,0.4)", width: "16px", textAlign: "center" }} />
+                    <div>
+                      <strong style={{ display: "block", fontSize: "0.85rem" }}>{name}</strong>
+                      <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)" }}>{desc}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          {history.length > 0 ? (
+            <article className="registry-paper registry-prep-card registry-upgrade-panel">
+              <header>
+                <div>
+                  <span>Permanent office improvements</span>
+                  <h4>Upgrade Bench</h4>
+                </div>
+                <strong>{upgradeCredits} credits</strong>
+              </header>
+              <div>
+                {officeUpgrades.map((upgrade) => {
+                  const owned = ownedUpgrades.includes(upgrade.id);
+                  return (
+                    <button
+                      disabled={owned || upgradeCredits < 1}
+                      key={upgrade.id}
+                      onClick={() => {
+                        setOwnedUpgrades((upgrades) => addUnique(upgrades, upgrade.id));
+                        setUpgradeCredits((credits) => Math.max(0, credits - 1));
+                      }}
+                      type="button"
+                    >
+                      <strong>{upgrade.name}</strong>
+                      <span>{upgrade.benefit}</span>
+                      <small>Tradeoff: {upgrade.sideEffect}</small>
+                      <em>{owned ? "Installed" : "Cost: 1 credit"}</em>
+                    </button>
+                  );
+                })}
+              </div>
+            </article>
+          ) : null}
+
+          {archiveRepairActive ? (
+            <article className="registry-paper registry-prep-card" style={{ padding: "16px", marginBottom: "18px" }}>
+              <header style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "6px", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 style={{ margin: 0 }}>Archive Restoration ({prepPoints} Points Left)</h4>
+                <span style={{ fontSize: "0.8rem" }}>Restored: {decryptedFiles.length} / {residents.length}</span>
+              </header>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+                {residents.map((r) => {
+                  const isDone = decryptedFiles.includes(r.id);
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      disabled={isDone || prepPoints < 40}
+                      onClick={() => {
+                        setRepairTarget(r.id);
+                        setRepairSources([]);
+                      }}
+                      style={{
+                        padding: "8px",
+                        background: isDone ? "rgba(34, 201, 214, 0.12)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${isDone ? "#22c9d6" : "rgba(255,255,255,0.1)"}`,
+                        borderRadius: "4px",
+                        color: isDone ? "#22c9d6" : "white",
+                        fontSize: "0.8rem",
+                        cursor: isDone ? "default" : prepPoints >= 40 ? "pointer" : "not-allowed"
+                      }}
+                    >
+                      <i className={`fa-solid ${isDone ? "fa-circle-check" : "fa-unlock-keyhole"}`} style={{ marginRight: "6px" }} />
+                      <span>{r.name} {isDone ? "" : "(restore -40)"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </article>
+          ) : null}
+
+          <div style={{ textAlign: "center", padding: "10px 0 18px" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setResourcePool(getResourcePool(gameMode, selectedPerk, ownedUpgrades));
+                setFailures((currentFailures) => ({
+                  ...currentFailures,
+                  phone: selectedPerk === "repairkit" ? false : currentFailures.phone,
+                  scanner: selectedPerk === "booster" ? false : currentFailures.scanner,
+                  lock: selectedPerk === "override" ? false : currentFailures.lock,
+                }));
+                if (ownedUpgrades.includes("hotline")) setSanity((value) => clamp(value - 3));
+                if (ownedUpgrades.includes("camera-buffer")) setReputation((value) => clamp(value - 2));
+                if (ownedUpgrades.includes("scanner-capacitor")) setSafety((value) => clamp(value - 2));
+                setGamePhase("shift");
+              }}
+              style={{
+                padding: "12px 32px",
+                background: "radial-gradient(circle, #edc270 0%, #a47b32 100%)",
+                border: "none",
+                borderRadius: "6px",
+                color: "#121820",
+                fontSize: "1rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+                boxShadow: "0 0 16px rgba(237, 194, 112, 0.3)",
+                textTransform: "uppercase",
+                letterSpacing: "1px"
+              }}
+            >
+              Start Night Shift
+            </button>
+          </div>
+        </section>
+
+        {repairResident ? (
+          <div className="registry-modal registry-repair-modal" role="dialog" aria-modal="true" aria-labelledby="archive-repair-title">
+            <div className="registry-modal__card">
+              <span>Polluted archive sector</span>
+              <h2 id="archive-repair-title">Restore {repairResident.name}</h2>
+              <p>Drag or select at least two historical sources into the restoration tray. Recorded facts can be polluted; independent memory sources rebuild the file.</p>
+              <div className="registry-repair-sources">
+                {[
+                  ["old-photo", "Old photograph", `Shows ${repairResident.feature}.`],
+                  ["voice-reel", "Voice reel", `Preserves the greeting: ${repairResident.greeting}.`],
+                  ["paper-note", "Paper habit note", repairResident.habit],
+                ].map(([id, label, detail]) => (
+                  <button
+                    draggable
+                    key={id}
+                    onClick={() => setRepairSources((sources) => addUnique(sources, id))}
+                    onDragStart={(event) => event.dataTransfer.setData("text/plain", id)}
+                    type="button"
+                  >
+                    <strong>{label}</strong>
+                    <span>{detail}</span>
+                  </button>
+                ))}
+              </div>
+              <div
+                className="registry-repair-dropzone"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const source = event.dataTransfer.getData("text/plain");
+                  if (source) setRepairSources((sources) => addUnique(sources, source));
+                }}
+              >
+                <strong>Restoration tray</strong>
+                <span>{repairSources.length}/2 independent sources placed</span>
+                <div>
+                  {repairSources.map((source) => (
+                    <em key={source}>{source.replace("-", " ")}</em>
+                  ))}
+                </div>
+              </div>
+              <button
+                disabled={repairSources.length < 2}
+                onClick={() => {
+                  setDecryptedFiles((files) => addUnique(files, repairResident.id));
+                  setPrepPoints((points) => Math.max(0, points - 40));
+                  setRepairTarget(null);
+                  setRepairSources([]);
+                }}
+                type="button"
+              >
+                Restore True Record
+              </button>
+              <button
+                className="registry-modal__secondary"
+                onClick={() => {
+                  setRepairTarget(null);
+                  setRepairSources([]);
+                }}
+                type="button"
+              >
+                Close Archive
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </main>
+    );
+  }
 
   return (
     <main
       className={`registry-shell ${pressure > 48 ? "registry-shell--strained" : ""} registry-shell--mood-${visitorMood} ${
         feedback ? `registry-shell--decision-${feedback.decision}` : ""
-      } ${feedback && !feedback.correct ? "registry-shell--bad-call" : ""}`}
+      } ${feedback && !feedback.correct ? "registry-shell--bad-call" : ""} ${
+        screenEffect ? `registry-effect--${screenEffect}` : ""
+      } ${queuePressure >= 60 ? "registry-shell--queue-high" : ""} ${
+        learningImpostorActive ? "registry-shell--duplicate-active" : ""
+      } registry-shell--mode-${gameMode}`}
     >
       <section className="registry-hero">
         <a className="registry-design-link" href="/design-system">
           Design system
         </a>
         <div className="registry-hero__backdrop" aria-hidden="true">
+          <img className="registry-story-scene" src={storyScene} alt="" />
           <span className="registry-window registry-window--one" />
           <span className="registry-window registry-window--two" />
           <span className="registry-window registry-window--three" />
           <span className="registry-rain" />
+          <span className="registry-hallway-shadow" />
+          <span className="registry-fluorescent-glow" />
         </div>
         <div className="registry-hero__content">
           <span>Moonshadow Apartments</span>
@@ -1559,7 +1369,7 @@ export function MidnightRegistryGame() {
             <h2>{currentNight.subtitle}</h2>
           </div>
           <div className="registry-shift">
-            <span>Case type</span>
+            <span>{gameMode} / case type</span>
             <strong>{t(`visitor.${visitorType}`)}</strong>
           </div>
           <div className="registry-shift">
@@ -1568,7 +1378,7 @@ export function MidnightRegistryGame() {
           </div>
           <div className="registry-shift">
             <span>Queue pressure</span>
-            <strong>{queuePressure}%</strong>
+            <strong>{queuePressure}% / {Math.floor(visitorWaitMs / 1000)}s</strong>
           </div>
           <div className="registry-score">
             <span>Score</span>
@@ -1585,13 +1395,43 @@ export function MidnightRegistryGame() {
           <StatMeter label="Stability" value={sanity} tone="mind" />
         </div>
 
+        <div className="registry-resource-strip" aria-label="Shift tool resources">
+          {(Object.entries(resourcePool) as [ToolName, number][]).map(([tool, remaining]) => (
+            <span data-empty={remaining === 0} key={tool}>
+              <i className={`fa-solid ${tool === "phone" ? "fa-phone" : tool === "scanner" ? "fa-id-card" : tool === "camera" ? "fa-video" : "fa-comments"}`} />
+              <strong>{tool}</strong>
+              <em>{remaining} left</em>
+            </span>
+          ))}
+          {mostUsedTool && learningImpostorActive ? (
+            <span className="registry-learning-warning">
+              <i className="fa-solid fa-eye" />
+              <strong>Pattern learned</strong>
+              <em>{mostUsedTool} checks may be copied</em>
+            </span>
+          ) : null}
+        </div>
+
         <div className="registry-grid registry-grid--desk">
           <section className="registry-panel registry-arrival">
             <div className="registry-panel__title">
               <span>At the door / {t(`visitor.${visitorType}`)}</span>
               <h3>{visitor.name}</h3>
             </div>
-            <div className={`registry-portrait registry-portrait--${visitor.portrait} registry-portrait--${visitorMood}`} aria-label={`${visitor.name} portrait`}>
+            {visitor.specialEvent ? (
+              <div className="registry-special-event">
+                <strong>{visitor.specialEvent.label}</strong>
+                <span>{visitor.specialEvent.detail}</span>
+              </div>
+            ) : null}
+            <div
+              className={`registry-portrait registry-portrait--${visitor.portrait} registry-portrait--${visitorMood} ${
+                activeTool === "scanner" ? "registry-scanline" : ""
+              } ${visitor.isMirror ? "registry-portrait--duplicate" : ""} ${
+                visitor.isMirror && sanity < 55 ? "registry-portrait--eye-glitch" : ""
+              }`}
+              aria-label={`${visitor.name} portrait`}
+            >
               <img src={portraitAsset.image} alt={`${portraitAsset.name} asset card`} />
             </div>
             <dl className="registry-facts">
@@ -1601,6 +1441,9 @@ export function MidnightRegistryGame() {
               <div><dt>ID</dt><dd>{visitor.idCode}</dd></div>
               <div><dt>Reason</dt><dd>{visitor.reason}</dd></div>
               <div><dt>Badge</dt><dd>{visitor.badge}</dd></div>
+              {visitor.sourceResidentId ? (
+                <div><dt>Record status</dt><dd>{residentStatuses[visitor.sourceResidentId]}</dd></div>
+              ) : null}
             </dl>
           </section>
 
@@ -1626,6 +1469,18 @@ export function MidnightRegistryGame() {
                   <span>{t(labelKey as string)}</span>
                 </button>
               ))}
+              {deskView === "cctv" && (
+                <button aria-selected={true} type="button">
+                  <i className="fa-solid fa-video" aria-hidden="true" style={{ color: "#22c9d6" }} />
+                  <span style={{ color: "#22c9d6" }}>CCTV Monitor</span>
+                </button>
+              )}
+              {deskView === "phone" && (
+                <button aria-selected={true} type="button">
+                  <i className="fa-solid fa-phone-flip" aria-hidden="true" style={{ color: "#edc270" }} />
+                  <span style={{ color: "#edc270" }}>Switchboard</span>
+                </button>
+              )}
             </div>
 
             <div className="registry-desk-surface">
@@ -1638,6 +1493,7 @@ export function MidnightRegistryGame() {
                         key={document.id}
                         onClick={() => {
                           setActiveDocument(document.id);
+                          setDocumentMotionKey((key) => key + 1);
                           setCheckedItems((items) => addUnique(items, "documents"));
                         }}
                         type="button"
@@ -1648,7 +1504,7 @@ export function MidnightRegistryGame() {
                     ))}
                   </div>
                   {selectedDocument ? (
-                    <article className="registry-paper registry-paper--document-enter" key={selectedDocument.id}>
+                    <article className="registry-paper registry-paper--document-enter" key={`${selectedDocument.id}-${documentMotionKey}`}>
                       <header>
                         <span>Collected paper</span>
                         <h4>{selectedDocument.title}</h4>
@@ -1673,15 +1529,36 @@ export function MidnightRegistryGame() {
                     <h4>{resident ? resident.name : visitor.appointment ? "Visitor Register" : "No matching file"}</h4>
                   </header>
                   {resident ? (
-                    <dl className="registry-facts registry-facts--paper">
-                      <div><dt>Room</dt><dd>{resident.room}</dd></div>
-                      <div><dt>Job</dt><dd>{resident.job}</dd></div>
-                      <div><dt>ID</dt><dd>{resident.idCode}</dd></div>
-                      <div><dt>Feature</dt><dd>{resident.feature}</dd></div>
-                      <div><dt>Habit</dt><dd>{resident.habit}</dd></div>
-                      <div><dt>Never</dt><dd>{resident.forbidden}</dd></div>
-                      <div><dt>Greeting</dt><dd>{resident.greeting}</dd></div>
-                    </dl>
+                    <>
+                      <dl className="registry-facts registry-facts--paper">
+                        <div><dt>Room</dt><dd>{resident.room}</dd></div>
+                        <div><dt>Job</dt><dd>{resident.job}</dd></div>
+                        <div><dt>ID</dt><dd>{resident.idCode}</dd></div>
+                        <div><dt>Feature</dt><dd>{isCorrupted ? "[CORRUPTED - SECTOR GLITCH]" : resident.feature}</dd></div>
+                        <div><dt>Habit</dt><dd>{isCorrupted ? "[CORRUPTED - SECTOR GLITCH]" : resident.habit}</dd></div>
+                        <div><dt>Never</dt><dd>{isCorrupted ? "[CORRUPTED - SECTOR GLITCH]" : resident.forbidden}</dd></div>
+                        <div><dt>Greeting</dt><dd>{resident.greeting}</dd></div>
+                      </dl>
+                      <div className={`registry-relationship-network ${isCorrupted ? "is-corrupted" : ""}`}>
+                        <strong>Resident relationship cross-check</strong>
+                        {(residentRelationships[resident.id] ?? []).map((relationship) => {
+                          const linkedResident = getResident(relationship.residentId);
+                          const linkedStatus = residentStatuses[relationship.residentId] ?? "active";
+                          return (
+                            <span key={`${resident.id}-${relationship.residentId}`}>
+                              <b>{linkedResident?.name ?? relationship.residentId}</b>
+                              <em>{isCorrupted ? "LINK POLLUTED - restore during daytime prep" : relationship.detail}</em>
+                              <small data-status={linkedStatus}>{linkedStatus}</small>
+                            </span>
+                          );
+                        })}
+                      </div>
+                      {isCorrupted ? (
+                        <p className="registry-corruption-warning">
+                          Historical sources are required. This file can only be repaired during daytime prep.
+                        </p>
+                      ) : null}
+                    </>
                   ) : visitor.appointment ? (
                     <dl className="registry-facts registry-facts--paper">
                       <div><dt>Name</dt><dd>{visitor.appointment.name}</dd></div>
@@ -1779,6 +1656,230 @@ export function MidnightRegistryGame() {
                   </article>
                 </div>
               ) : null}
+
+              {/* CCTV Monitor Sub-Panel */}
+              {deskView === "cctv" ? (
+                <article className="registry-paper registry-paper--cctv-board" style={{ display: "block" }}>
+                  <header>
+                    <span>cctv screen</span>
+                    <h4>Lobby CCTV Terminal (CH{cctvChannel})</h4>
+                  </header>
+                  <div style={{ display: "flex", gap: "12px", padding: "12px 0" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "160px" }}>
+                      {cctvSceneAssets.map((scene) => (
+                        <button
+                          disabled={resourcePool.camera <= 0 && cctvChannel !== scene.channel}
+                          key={scene.channel}
+                          type="button"
+                          onClick={() => {
+                            if (cctvChannel === scene.channel) return;
+                            if (resourcePool.camera <= 0) {
+                              setToolLog("No CCTV review time remains for this shift.");
+                              return;
+                            }
+                            setCctvChannel(scene.channel);
+                            setResourcePool((resources) => ({ ...resources, camera: Math.max(0, resources.camera - 1) }));
+                            setTotalToolUsage((usage) => ({ ...usage, camera: usage.camera + 1 }));
+                            setCheckedItems((items) => addUnique(items, "appearance"));
+                            const isCctvTrap = learningImpostorActive && mostUsedTool === "camera";
+                            const isCctvAnomaly = visitor.isMirror && !isCctvTrap && (
+                              scene.channel === 2 ||
+                              (scene.channel === 3 && (visitor.name === "Owen Xu" || visitor.name === "Han Dong")) ||
+                              (scene.channel === 4 && (visitor.name === "Li Mei" || visitor.name === "Ke Ren"))
+                            );
+                            if (isCctvAnomaly) {
+                              setSelectedEvidence((items) => addUnique(items, "appearance"));
+                            }
+                          }}
+                          style={{
+                            padding: "8px",
+                            background: cctvChannel === scene.channel ? "rgba(34, 201, 214, 0.15)" : "rgba(255,255,255,0.03)",
+                            border: `1px solid ${cctvChannel === scene.channel ? "#22c9d6" : "rgba(255,255,255,0.1)"}`,
+                            borderRadius: "4px",
+                            color: "white",
+                            fontSize: "0.75rem",
+                            textAlign: "left",
+                            cursor: "pointer"
+                          }}
+                        >
+                          <i className={`fa-solid ${scene.channel === 1 ? "fa-user" : scene.channel === 2 ? "fa-circle-half-stroke" : scene.channel === 3 ? "fa-box-open" : "fa-elevator"}`} style={{ marginRight: "6px", color: cctvChannel === scene.channel ? "#22c9d6" : "rgba(255,255,255,0.4)" }} />
+                          <span>CH{scene.channel}: {scene.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div
+                      style={{
+                        flex: 1,
+                        background: "#050b0f",
+                        border: "3px solid #1a2f3a",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        minHeight: "180px",
+                        position: "relative",
+                        overflow: "hidden"
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background: "linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))",
+                          backgroundSize: "100% 4px, 6px 100%",
+                          pointerEvents: "none"
+                        }}
+                      />
+                      <div style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#22c9d6", display: "flex", justifyContent: "space-between", marginBottom: "12px", borderBottom: "1px solid rgba(34, 201, 214, 0.3)", paddingBottom: "4px" }}>
+                        <span>CAMERA FEED: CH{cctvChannel}</span>
+                        <span>LIVE - NIGHT {dayIndex + 1}</span>
+                      </div>
+
+                      <img
+                        className="registry-cctv-feed"
+                        key={`${visitor.id}-${cctvChannel}`}
+                        src={cctvSceneAssets[cctvChannel - 1].image}
+                        alt={`${cctvSceneAssets[cctvChannel - 1].label} surveillance scene`}
+                      />
+
+                      <p style={{ margin: 0, color: "#9cd6db", fontSize: "0.85rem", lineHeight: "1.4", minHeight: "100px" }}>
+                        {(() => {
+                          const isCctvTrap = learningImpostorActive && mostUsedTool === "camera";
+
+                          if (cctvChannel === 1) {
+                            return isCctvTrap
+                              ? `Front Gate view shows: ${visitor.name}. Features align with archive photo. No visible anomalies.`
+                              : `Front Gate view shows: ${visitor.name}. Eyes: ${visitor.eyes}, Hair: ${visitor.hair}, Special details: ${visitor.feature}.`;
+                          }
+                          if (cctvChannel === 2) {
+                            if (visitor.isMirror) {
+                              return isCctvTrap
+                                ? "Corridor camera shows the subject standing still. Shadow casts naturally on the floor."
+                                : "Corridor camera shows: Subject's shadow points directly toward the light source. WARNING: Shadow angle violates physical laws.";
+                            }
+                            return "Corridor camera shows: Subject casts a natural shadow toward the stairwell.";
+                          }
+                          if (cctvChannel === 3) {
+                            if (visitor.name === "Owen Xu" && visitor.isMirror) {
+                              return isCctvTrap
+                                ? "Desk Counter camera shows a violin case on the ledge. Latch details appear standard."
+                                : "Desk Counter camera shows a violin case on the ledge. Latch is brass (violates silver file notes).";
+                            }
+                            if (visitor.name === "Sun Hao") {
+                              return "Desk Counter camera shows a small parcel wrapped in grease paper on the counter.";
+                            }
+                            if (visitor.name === "Han Dong" && visitor.isMirror) {
+                              return isCctvTrap
+                                ? "Desk Counter camera shows a standard maintenance toolbox on the counter."
+                                : "Desk Counter camera shows: The contractor's toolbox is slightly open. Inside is completely empty; no tools visible.";
+                            }
+                            if (visitor.name === "Zhao Jun") {
+                              return "Desk Counter camera shows: Leather folder is placed flat on the counter desk.";
+                            }
+                            return "Desk Counter camera shows: Documents placed on the glass. Subject's posture is steady.";
+                          }
+                          if (cctvChannel === 4) {
+                            if (visitor.name === "Li Mei" && visitor.isMirror) {
+                              return isCctvTrap
+                                ? "Elevator landing shows elevator is locked."
+                                : "Elevator landing shows elevator call light is active and blinking (Li Mei never uses the elevator).";
+                            }
+                            if (visitor.name === "Ke Ren") {
+                              return "Elevator landing: CCTV signal is flickering violently. Video frame loses sync for three frames.";
+                            }
+                            return "Elevator landing shows elevator is empty and stationary on ground floor.";
+                          }
+                          return "Feed loading...";
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ) : null}
+
+              {/* Switchboard Sub-Panel */}
+              {deskView === "phone" ? (
+                <article className="registry-paper registry-paper--phone-board">
+                  <header>
+                    <span>Switchboard lines</span>
+                    <h4>Plug-In Directory (Case: {Math.max(0, 3 - toolCounts.phone)} / Shift: {resourcePool.phone})</h4>
+                  </header>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px 0" }}>
+                    {[
+                      { id: "room", label: `Room ${visitor.room} Line`, desc: "Dial occupant's room directly." },
+                      { id: "management", label: "Management Office", desc: "Confirm work order or notice approvals." },
+                      { id: "security", label: "Security Guard Desk", desc: "Consult building guard for advice." },
+                      { id: "neighbor", label: "Neighboring Apartment", desc: "Cross-check neighbor observations." }
+                    ].map((line) => {
+                      const isCallLimit = toolCounts.phone >= 3 || resourcePool.phone <= 0;
+                      return (
+                        <button
+                          key={line.id}
+                          type="button"
+                          disabled={isCallLimit || activeTool !== null}
+                          onClick={() => {
+                            if (feedback) return;
+                            setToolCounts((counts) => ({ ...counts, phone: counts.phone + 1 }));
+                            setResourcePool((resources) => ({ ...resources, phone: Math.max(0, resources.phone - 1) }));
+                            const isPhoneTrap = learningImpostorActive && mostUsedTool === "phone";
+
+                            let resultText = "";
+                            if (line.id === "room") {
+                              const residentStatus = visitor.sourceResidentId ? residentStatuses[visitor.sourceResidentId] : "active";
+                              resultText = residentStatus === "replaced"
+                                ? "The room answers with a perfectly copied voice, but a second receiver can be heard breathing on the same line."
+                                : residentStatus === "stranded"
+                                  ? "No one answers upstairs. The resident was previously turned away and never returned."
+                                  : isPhoneTrap
+                                ? "The receiver clicks. An identical voice to the visitor answers: 'Yes, that is me. I am expected, let me up.'"
+                                : phoneLines[0]?.result ?? visitor.phone;
+                            } else if (line.id === "management") {
+                              resultText = phoneLines[1]?.result ?? "Management repeats: 'Check the guidelines. No exceptions.'";
+                            } else if (line.id === "security") {
+                              resultText = dayIndex === 6
+                                ? "Zhou Qiming's line clicks. A low whisper warns: 'Do not sign in the duplicate Y. Xue. Check the back of your badge.'"
+                                : "Zhou Qiming answers: 'I'm watching the stairwells. Match the shadow direction on camera.'";
+                            } else {
+                              resultText = "The line rings... A resident answers: 'I heard strange noises in the hallways, check their habits!'";
+                            }
+
+                            setTotalToolUsage((usage) => ({ ...usage, phone: usage.phone + 1 }));
+                            setActiveTool("phone");
+                            setToolLog("Establishing switchboard patch connection...");
+
+                            setTimeout(() => {
+                              setToolLog(`${line.label}: ${resultText}`);
+                              setActiveTool(null);
+                              setVisitorMood("nervous");
+                              setCheckedItems((items) => addUnique(items, "phone"));
+                              if (resultText.includes("already") || resultText.includes("contradicts") || resultText.includes("No relief")) {
+                                setSelectedEvidence((items) => addUnique(addUnique(items, "phone"), "ledger"));
+                              }
+                              if (resultText.includes("screams") || resultText.includes("wet tapping") || resultText.includes("whispers")) {
+                                setSanity((value) => clamp(value - 4));
+                              }
+                            }, 1200);
+                          }}
+                          style={{
+                            padding: "10px",
+                            background: "rgba(255, 255, 255, 0.03)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            borderRadius: "6px",
+                            color: "white",
+                            cursor: isCallLimit || activeTool !== null ? "not-allowed" : "pointer",
+                            textAlign: "left"
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <i className="fa-solid fa-plug" style={{ color: "#edc270" }} />
+                            <strong style={{ fontSize: "0.85rem", color: "#edc270" }}>{line.label}</strong>
+                          </div>
+                          <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "rgba(255,255,255,0.6)" }}>{line.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </article>
+              ) : null}
             </div>
           </section>
 
@@ -1800,58 +1901,173 @@ export function MidnightRegistryGame() {
 
         <section className="registry-tools">
           <div className="registry-tool-buttons" aria-label="Verification tools">
-            <button disabled={toolCounts.phone >= phoneLines.length} type="button" onClick={() => useTool("phone")}>
+            <button
+              className={deskView === "phone" ? "is-active" : ""}
+              type="button"
+              onClick={() => {
+                if (failures.phone) {
+                  setPhoneWires({
+                    left: ["Red", "Blue", "Yellow"],
+                    right: ["Blue", "Yellow", "Red"].sort(() => Math.random() - 0.5),
+                    connections: {},
+                  });
+                  setSelectedLeftWire(null);
+                  setActiveRepairTool("phone");
+                } else {
+                  setDeskView("phone");
+                  setToolLog("Switchboard dial tones active. Plug a jack line to call a contact.");
+                }
+              }}
+            >
               <img src="/assets/midnight-registry/props/phone-receiver-dial.png" alt="" aria-hidden="true" />
-              <span>{toolCounts.phone >= phoneLines.length ? t("ui.tools.phoneLocked") : `${t("ui.tools.phoneCall")} ${phoneLines[toolCounts.phone]?.label}`}</span>
+              <span>{failures.phone ? "⚠️ Phone Error" : "Switchboard"}</span>
             </button>
-            <button disabled={toolCounts.scanner >= 1} type="button" onClick={() => useTool("scanner")}>
+            <button
+              disabled={toolCounts.scanner >= 1 || activeTool !== null || resourcePool.scanner <= 0}
+              className={activeTool === "scanner" ? "is-active" : ""}
+              type="button"
+              onClick={() => {
+                if (failures.scanner) {
+                  setScannerProgress(0);
+                  setActiveRepairTool("scanner");
+                } else {
+                  setTotalToolUsage((usage) => ({ ...usage, scanner: usage.scanner + 1 }));
+                  useTool("scanner");
+                }
+              }}
+            >
               <img src="/assets/midnight-registry/props/id-scanner-device.png" alt="" aria-hidden="true" />
-              <span>{t("ui.tools.scanner")}</span>
+              <span>{failures.scanner ? "⚠️ Scanner Error" : t("ui.tools.scanner")}</span>
             </button>
-            <button disabled={toolCounts.camera >= 1} type="button" onClick={() => useTool("camera")}>
+            <button
+              className={deskView === "cctv" ? "is-active" : ""}
+              type="button"
+              onClick={() => {
+                if (failures.camera) {
+                  setCctvFrequency(50.0);
+                  setCctvTargetFrequency(parseFloat((60 + Math.random() * 30).toFixed(1)));
+                  setActiveRepairTool("camera");
+                } else {
+                  setDeskView("cctv");
+                  setToolLog("CCTV terminal feed loaded. Select channel CH1-CH4 to check security angles.");
+                }
+              }}
+            >
               <img src="/assets/midnight-registry/props/cctv-monitor.png" alt="" aria-hidden="true" />
-              <span>{t("ui.tools.camera")}</span>
+              <span>{failures.camera ? "⚠️ CCTV Error" : t("ui.tools.camera")}</span>
             </button>
           </div>
           <div className="registry-tool-log">
-            <p>{toolLog}</p>
+            <TypewriterText text={toolLog} />
             <span>{checkedItems.length}/{checklistItems.length} sources checked / {selectedEvidence.length} evidence reasons marked</span>
           </div>
+
+          {/* V2 Redesigned Question Index Cards */}
           <div className="registry-question-board" aria-label="Question prompts">
-            <strong>Questions left: {Math.max(0, 3 - toolCounts.question)}</strong>
-            <div>
-              {questionOptions.map((question) => (
-                <button
-                  disabled={toolCounts.question >= 3}
-                  key={question.category}
-                  onClick={() => askQuestion(question)}
-                  type="button"
-                >
-                  <img src="/assets/midnight-registry/props/question-prompt-card.png" alt="" aria-hidden="true" />
-                  <span>{question.prompt}</span>
-                  <small>{question.category}</small>
-                </button>
-              ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <strong>Interview Questions Left:</strong>
+              <div style={{ display: "flex", gap: "6px" }}>
+                {[1, 2, 3].map((n) => (
+                  <span
+                    key={n}
+                    style={{
+                      display: "inline-block",
+                      width: "10px",
+                      height: "10px",
+                      borderRadius: "50%",
+                      background: toolCounts.question >= n ? "rgba(255,255,255,0.2)" : "#22c9d6",
+                      boxShadow: toolCounts.question >= n ? "none" : "0 0 8px #22c9d6"
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+              {questionOptions.map((question) => {
+                const disabled = toolCounts.question >= 3 || feedback !== null || resourcePool.question <= 0;
+                return (
+                  <button
+                    disabled={disabled}
+                    key={question.category}
+                    onClick={() => {
+                      setTotalToolUsage((usage) => ({ ...usage, question: usage.question + 1 }));
+                      askQuestion(question);
+                    }}
+                    type="button"
+                    style={{
+                      background: "linear-gradient(135deg, #1d2630 0%, #111822 100%)",
+                      border: "1px solid rgba(237, 194, 112, 0.2)",
+                      borderRadius: "6px",
+                      padding: "10px",
+                      textAlign: "left",
+                      color: "white",
+                      cursor: disabled ? "not-allowed" : "pointer",
+                      opacity: disabled ? 0.4 : 1,
+                      position: "relative",
+                      minHeight: "110px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      transition: "all 0.2s"
+                    }}
+                    className="registry-question-card"
+                  >
+                    <div style={{ position: "absolute", top: "-4px", left: "12px", width: "24px", height: "10px", background: "rgba(237,194,112,0.15)", transform: "rotate(-5deg)", border: "1px solid rgba(237,194,112,0.2)" }} />
+                    <span style={{ fontSize: "0.8rem", color: "#eedcb2", fontWeight: "bold", display: "block", marginTop: "4px" }}>{question.prompt}</span>
+                    <span style={{ fontSize: "0.65rem", textTransform: "uppercase", color: "#22c9d6", alignSelf: "flex-end", letterSpacing: "1px" }}>{question.category}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
 
         <footer className="registry-decisions">
-          <button className="registry-decision registry-decision--allow" type="button" onClick={() => decide("allow")}>
+          {/* Clerk Duplicate special climax Hidden Ending trigger */}
+          {visitor.room === "000" && sanity >= 60 && safety >= 75 && reputation >= 75 && selectedEvidence.length >= 3 && (
+            <button
+              className="registry-decision"
+              style={{
+                gridColumn: "span 4",
+                background: "linear-gradient(180deg, #991c20 0%, #ff4b4b 100%)",
+                border: "2px solid #ff7b7b",
+                borderRadius: "8px",
+                padding: "12px",
+                marginBottom: "12px",
+                color: "white",
+                fontWeight: "bold",
+                cursor: "pointer"
+              }}
+              disabled={screenEffect !== null || feedback !== null || holdReveal !== null}
+              type="button"
+              onClick={() => {
+                setScreenEffect("security");
+                setVisitorMood("revealed");
+                setTimeout(() => {
+                  setEnding("Hidden Ending: You gather the evidence reasons matching the registry's glitch. Using the security alarm as cover, you burn the registry ledger. The door remains sealed, your replacement Y. Xue is erased, and your own name disappears from Moonshadow's history.");
+                }, 750);
+              }}
+            >
+              <i className="fa-solid fa-fire" style={{ marginRight: "8px" }} />
+              <span>Burn the Registry Ledger (Destroy Record)</span>
+            </button>
+          )}
+
+          <button className="registry-decision registry-decision--allow" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("allow")}>
             <img src="/assets/midnight-registry/props/approve-stamp.png" alt="" aria-hidden="true" />
-            <span>{t("decision.allow")}</span>
+            <span>{failures.lock ? "⚠️ Lock stuck" : t("decision.allow")}</span>
           </button>
-          <button className="registry-decision registry-decision--reject" type="button" onClick={() => decide("reject")}>
+          <button className="registry-decision registry-decision--reject" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("reject")}>
             <img src="/assets/midnight-registry/props/deny-stamp.png" alt="" aria-hidden="true" />
-            <span>{t("decision.reject")}</span>
+            <span>{failures.lock ? "⚠️ Lock stuck" : t("decision.reject")}</span>
           </button>
-          <button className="registry-decision registry-decision--security" type="button" onClick={() => decide("security")}>
+          <button className="registry-decision registry-decision--security" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("security")}>
             <img src="/assets/midnight-registry/props/security-call-stamp.png" alt="" aria-hidden="true" />
-            <span>{t("decision.security")}</span>
+            <span>{failures.lock ? "⚠️ Lock stuck" : t("decision.security")}</span>
           </button>
-          <button className="registry-decision registry-decision--wait" type="button" onClick={() => decide("wait")}>
+          <button className="registry-decision registry-decision--wait" disabled={screenEffect !== null || feedback !== null || holdReveal !== null} type="button" onClick={() => decide("wait")}>
             <img src="/assets/midnight-registry/props/wait-token.png" alt="" aria-hidden="true" />
-            <span>{t("decision.wait")}</span>
+            <span>{failures.lock ? "⚠️ Lock stuck" : t("decision.wait")}</span>
           </button>
         </footer>
       </section>
@@ -1871,6 +2087,245 @@ export function MidnightRegistryGame() {
           )}
         </div>
       </section>
+
+      {holdReveal ? (
+        <div className="registry-modal registry-hold-modal" role="dialog" aria-modal="true" aria-labelledby="registry-hold-title">
+          <div className="registry-modal__card">
+            <span>Hold investigation</span>
+            <h2 id="registry-hold-title">{holdReveal.phase === "waiting" ? "The Clock Advances" : "A Second Source Responds"}</h2>
+            <div className={`registry-hold-clock is-${holdReveal.phase}`}>
+              <i className="fa-solid fa-hourglass-half" />
+              <strong>{holdReveal.phase === "waiting" ? "WAITING" : "CALLBACK RECEIVED"}</strong>
+            </div>
+            <p>{holdReveal.text}</p>
+            {holdReveal.phase === "revealed" ? (
+              <>
+                <div className="registry-hold-evidence">
+                  {holdReveal.evidence.map((evidence) => (
+                    <span key={evidence}>{evidence}</span>
+                  ))}
+                </div>
+                <button onClick={recordHoldDecision} type="button">
+                  Record Hold Result
+                </button>
+              </>
+            ) : (
+              <div className="registry-hold-progress"><i /></div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {nightSettlement ? (
+        <div className="registry-modal registry-settlement-modal" role="dialog" aria-modal="true" aria-labelledby="registry-settlement-title">
+          <div className="registry-modal__card">
+            <span>Nightly settlement</span>
+            <h2 id="registry-settlement-title">Night {nightSettlement.night} Recorded</h2>
+            <div className="registry-ending-stats">
+              <strong>Correct {nightSettlement.correct}/{nightSettlement.total}</strong>
+              <strong>Replaced {nightSettlement.replaced}</strong>
+              <strong>Upgrade credits +{nightSettlement.credits}</strong>
+              <strong>Stability {sanity}</strong>
+            </div>
+            <p>The ledger dries. Daylight gives you one preparation window before the next set of records arrives.</p>
+            <button onClick={continueAfterSettlement} type="button">
+              <i className="fa-solid fa-sun" />
+              <span>{gameMode === "endless" ? "Prepare Next Endless Round" : "Open Daytime Prep"}</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Repair Mini-game Modal */}
+      {activeRepairTool ? (
+        <div className="registry-modal" role="dialog" aria-modal="true" style={{ zIndex: 99 }}>
+          <div className="registry-modal__card" style={{ maxWidth: "480px", border: "2px solid #ff7b7b" }}>
+            <span style={{ color: "#ff7b7b", fontWeight: "bold" }}>⚠️ EQUIPMENT MALFUNCTION</span>
+            <h2>Repair: {activeRepairTool.toUpperCase()}</h2>
+            <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>
+              {activeRepairTool === "phone" && "Match and connect the switchboard wire lines on left and right."}
+              {activeRepairTool === "camera" && "Tune frequency slider close to target channel range."}
+              {activeRepairTool === "scanner" && "Press calibrate when laser is inside the green sweet spot."}
+              {activeRepairTool === "lock" && "Input the security backup bypass pin code."}
+            </p>
+
+            {/* Phone Repair: Wires match */}
+            {activeRepairTool === "phone" && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "18px", background: "rgba(0,0,0,0.2)", borderRadius: "8px", marginBottom: "16px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <strong>Switch Slots</strong>
+                  {phoneWires.left.map((color) => {
+                    const connected = phoneWires.connections[color];
+                    return (
+                      <button
+                        key={`left-${color}`}
+                        type="button"
+                        onClick={() => handleLeftWireClick(color)}
+                        disabled={!!connected}
+                        style={{
+                          padding: "8px 16px",
+                          background: connected ? "rgba(255,255,255,0.05)" : selectedLeftWire === color ? color.toLowerCase() : "rgba(255,255,255,0.1)",
+                          border: `1px solid ${selectedLeftWire === color ? "white" : "rgba(255,255,255,0.2)"}`,
+                          borderRadius: "4px",
+                          color: connected ? "rgba(255,255,255,0.3)" : "white",
+                          fontSize: "0.8rem",
+                          cursor: connected ? "default" : "pointer"
+                        }}
+                      >
+                        {color} Plug {connected ? "🔌" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <strong>Terminal Jacks</strong>
+                  {phoneWires.right.map((color) => {
+                    const isConnected = Object.values(phoneWires.connections).includes(color);
+                    return (
+                      <button
+                        key={`right-${color}`}
+                        type="button"
+                        onClick={() => handleRightWireClick(color)}
+                        disabled={isConnected || !selectedLeftWire}
+                        style={{
+                          padding: "8px 16px",
+                          background: isConnected ? color.toLowerCase() : "rgba(255,255,255,0.1)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: "4px",
+                          color: isConnected ? "black" : "white",
+                          fontSize: "0.8rem",
+                          cursor: isConnected || !selectedLeftWire ? "default" : "pointer"
+                        }}
+                      >
+                        Jack {color} {isConnected ? "✓" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* CCTV Repair: Frequency tuner */}
+            {activeRepairTool === "camera" && (
+              <div style={{ padding: "18px", background: "rgba(0,0,0,0.2)", borderRadius: "8px", marginBottom: "16px", textAlign: "center" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "0.9rem" }}>
+                  <span>Current: <strong>{cctvFrequency.toFixed(1)} MHz</strong></span>
+                  <span style={{ color: "#22c9d6" }}>Target: <strong>{cctvTargetFrequency.toFixed(1)} MHz</strong></span>
+                </div>
+                <input
+                  type="range"
+                  min="50"
+                  max="100"
+                  step="0.1"
+                  value={cctvFrequency}
+                  onChange={(e) => setCctvFrequency(parseFloat(e.target.value))}
+                  style={{ width: "100%", accentColor: "#edc270", marginBottom: "16px" }}
+                />
+                <button
+                  type="button"
+                  onClick={tuneCctv}
+                  style={{
+                    padding: "8px 24px",
+                    background: "#edc270",
+                    border: "none",
+                    borderRadius: "4px",
+                    color: "black",
+                    fontWeight: "bold",
+                    cursor: "pointer"
+                  }}
+                >
+                  Tune Channel
+                </button>
+              </div>
+            )}
+
+            {/* ID Scanner Repair: Calibration */}
+            {activeRepairTool === "scanner" && (
+              <div style={{ padding: "18px", background: "rgba(0,0,0,0.2)", borderRadius: "8px", marginBottom: "16px", textAlign: "center" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.85rem" }}>
+                  <span>Beam: <strong>{scannerProgress}%</strong></span>
+                  <span style={{ color: "#22c9d6" }}>Target Sweet Spot: <strong>45-55%</strong></span>
+                </div>
+                <div style={{ height: "20px", background: "rgba(255,255,255,0.1)", borderRadius: "10px", overflow: "hidden", position: "relative", marginBottom: "16px" }}>
+                  <div style={{ position: "absolute", left: "45%", width: "10%", top: 0, bottom: 0, background: "rgba(34, 201, 214, 0.4)" }} />
+                  <div style={{ width: `${scannerProgress}%`, height: "100%", background: "linear-gradient(90deg, #ff7b7b, #edc270)" }} />
+                </div>
+                <button
+                  type="button"
+                  onClick={calibrateScanner}
+                  style={{
+                    padding: "8px 24px",
+                    background: "#edc270",
+                    border: "none",
+                    borderRadius: "4px",
+                    color: "black",
+                    fontWeight: "bold",
+                    cursor: "pointer"
+                  }}
+                >
+                  Calibrate Beam
+                </button>
+              </div>
+            )}
+
+            {/* Lock Repair: Keypad input */}
+            {activeRepairTool === "lock" && (
+              <div style={{ padding: "18px", background: "rgba(0,0,0,0.2)", borderRadius: "8px", marginBottom: "16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ fontSize: "0.85rem", color: "#ff7b7b", border: "1px dashed #ff7b7b", padding: "4px 12px", borderRadius: "4px", marginBottom: "12px", fontFamily: "monospace" }}>
+                  STICKY NOTE BACKUP CODE: <strong>{lockTargetCode}</strong>
+                </div>
+                <div style={{ fontSize: "1.5rem", letterSpacing: "4px", background: "#050b0f", border: "1px solid #1a2f3a", borderRadius: "4px", width: "160px", textAlign: "center", padding: "6px 0", marginBottom: "12px", color: "#ff7b7b", minHeight: "36px" }}>
+                  {lockSequence || "----"}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px", width: "160px" }}>
+                  {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => pressLockKey(n)}
+                      style={{ padding: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", color: "white", cursor: "pointer" }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setLockSequence("")}
+                    style={{ padding: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", color: "#ff7b7b", cursor: "pointer" }}
+                  >
+                    C
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pressLockKey("0")}
+                    style={{ padding: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", color: "white", cursor: "pointer" }}
+                  >
+                    0
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setActiveRepairTool(null)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: "4px",
+                color: "rgba(255,255,255,0.6)",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                marginTop: "8px"
+              }}
+            >
+              Cancel Repair (Keep Offline)
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {feedback ? (
         <div className="registry-modal" role="dialog" aria-modal="true" aria-labelledby="registry-feedback-title">

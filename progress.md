@@ -1,8 +1,10 @@
 # Prototype Progress
 
+Original prompt: Finish the marked Midnight Registry V1-V4 roadmap, review the current changes, create the required animations and materials, verify formats and crops, fix findings, update the plan, and commit when complete.
+
 ## Current Direction
 
-Midnight Registry is the active playable prototype. It replaces visible Pet Town routes and pet-care gameplay with a 3-night door-clerk identity verification horror demo.
+Midnight Registry is the active playable prototype. It replaces visible Pet Town routes and pet-care gameplay with a seven-night door-clerk identity verification horror game while preserving the original three-night MVP cases.
 
 Current implementation status:
 
@@ -12,13 +14,18 @@ Current implementation status:
 - Core data for reusable assets and authored encounters lives in `data/midnightRegistryDesignSystem.ts`.
 - Storybook exposes the reusable design-system assets through `stories/MidnightRegistryDesignSystem.stories.tsx`.
 
-## Verified MVP Scope
+## Verified Playable Scope
 
-- 3 playable nights
+- 7 playable story nights
 - 10 resident records
-- 8 visitor checks per night
+- 68 authored/generated story cases, including the original 24-case three-night MVP
 - evidence-based fake detection through names, rooms, IDs, appearance, habits, appointments, phone calls, ledgers, and rules
 - four visitor outcomes: allow, refuse, security, hold
+- story, Blackout challenge, and endless shift modes
+- archive pollution and drag/select restoration
+- persistent resident outcomes, office upgrades, equipment failures, and learning impostors
+- 56 reusable animation events
+- 16 character portraits, 39 props/tools/clues, and 8 CCTV/environment materials
 
 ## Archived Work
 
@@ -26,8 +33,14 @@ The previous Pocket Town Companions prototype, routes, API handlers, data catalo
 
 Historical notes for that archived prototype are intentionally not treated as current source of truth.
 
-## Next TODO
+## Verification
 
-- Add durable persistence only after a Midnight Registry database model is designed.
-- Expand authored night content beyond the MVP once the 3-night loop is stable.
-- Keep the design-system assets reusable in the playable desk UI and Storybook.
+- `npm run verify:assets` validates portrait, prop, and CCTV dimensions plus the 56-event animation inventory.
+- `npm run lint` validates TypeScript.
+- `npm run build` validates the production Next.js build and both `/` and `/design-system` routes.
+- Contact-sheet review confirms individual exports contain no neighboring sheet art or filename strips.
+
+## Remaining Product Work
+
+- Durable save persistence remains intentionally deferred until a Midnight Registry database model is designed.
+- Additional authored cases can expand Endless Shift later without changing the completed V1-V4 systems.

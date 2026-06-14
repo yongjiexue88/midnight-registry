@@ -26,6 +26,20 @@ export type RegistryPropAsset = {
   usage: string;
 };
 
+export type RegistryCctvAsset = {
+  id: string;
+  label: string;
+  image: string;
+  anomaly: string;
+};
+
+export type RegistryAnimationAsset = {
+  id: number;
+  name: string;
+  category: "environment" | "visitor" | "document" | "tool" | "decision" | "story";
+  trigger: string;
+};
+
 export type RegistryErrorDetail = {
   id: string;
   label: string;
@@ -264,6 +278,116 @@ export const registrySheetAssets: RegistrySheetAsset[] = [
     usage: "Canonical story progression board with all seven nights and encounter density.",
     reviewNotes: ["All seven nights are present, including Night 6 Learning Impostors.", "Shows 8-15 encounter-card density per night.", "Includes ending badges and reusable error-detail cards."],
   },
+];
+
+export const registryCctvAssets: RegistryCctvAsset[] = [
+  {
+    id: "front-gate",
+    label: "Front gate",
+    image: `${registryAssetBase}/cctv/front-gate.png`,
+    anomaly: "Confirms arrival, clothing, and whether another body crosses the threshold.",
+  },
+  {
+    id: "impossible-hallway-shadow",
+    label: "Hallway angle",
+    image: `${registryAssetBase}/cctv/impossible-hallway-shadow.png`,
+    anomaly: "Exposes shadows that point toward the light source.",
+  },
+  {
+    id: "clerk-counter",
+    label: "Counter desk",
+    image: `${registryAssetBase}/cctv/clerk-counter.png`,
+    anomaly: "Checks carried objects, seals, latches, parcels, and toolboxes.",
+  },
+  {
+    id: "elevator-landing",
+    label: "Elevator landing",
+    image: `${registryAssetBase}/cctv/elevator-landing.png`,
+    anomaly: "Reveals forbidden elevator use, delayed reflections, and impossible floor calls.",
+  },
+  {
+    id: "archive-room",
+    label: "Polluted archive room",
+    image: `${registryAssetBase}/cctv/archive-room.png`,
+    anomaly: "Story background for moving files, open drawers, and registry rewrite events.",
+  },
+  {
+    id: "security-booth",
+    label: "Security booth",
+    image: `${registryAssetBase}/cctv/security-booth.png`,
+    anomaly: "Supports lockdown, alarm, and missing-guard consequences.",
+  },
+  {
+    id: "impossible-stairwell",
+    label: "Impossible stairwell",
+    image: `${registryAssetBase}/cctv/impossible-stairwell.png`,
+    anomaly: "Shows the extra landing that should not exist above the sixth floor.",
+  },
+  {
+    id: "blue-star-van",
+    label: "Blue Star service van",
+    image: `${registryAssetBase}/cctv/blue-star-van.png`,
+    anomaly: "Story background for the obsolete repair company returning in the rain.",
+  },
+];
+
+export const registryAnimationAssets: RegistryAnimationAsset[] = [
+  { id: 1, name: "Rain loop", category: "environment", trigger: "Always active over the lobby windows." },
+  { id: 2, name: "Window light flicker", category: "environment", trigger: "Random apartment-window pulse." },
+  { id: 3, name: "Desk lamp pulse", category: "environment", trigger: "Idle desk ambience." },
+  { id: 4, name: "Fluorescent buzz", category: "environment", trigger: "Low stability or equipment failure." },
+  { id: 5, name: "Hallway shadow pass", category: "environment", trigger: "Late-night threat pressure." },
+  { id: 6, name: "Clock tick jump", category: "environment", trigger: "Queue and hold time advance." },
+  { id: 7, name: "Queue pressure pulse", category: "environment", trigger: "Queue pressure above 60 percent." },
+  { id: 8, name: "Stability distortion", category: "environment", trigger: "Stability below 52 percent." },
+  { id: 9, name: "Visitor enter", category: "visitor", trigger: "Each new visitor case." },
+  { id: 10, name: "Visitor idle breathing", category: "visitor", trigger: "Visitor waiting at the glass." },
+  { id: 11, name: "Blink", category: "visitor", trigger: "Periodic portrait blink treatment." },
+  { id: 12, name: "Talking", category: "visitor", trigger: "Question or phone response." },
+  { id: 13, name: "Waiting", category: "visitor", trigger: "Visitor held longer than twenty seconds." },
+  { id: 14, name: "Nervous", category: "visitor", trigger: "Phone or identity pressure." },
+  { id: 15, name: "Suspicious smile", category: "visitor", trigger: "Trap question or copied memory." },
+  { id: 16, name: "Angry knock", category: "visitor", trigger: "Long wait or refusal pressure." },
+  { id: 17, name: "Lean in", category: "visitor", trigger: "Queue pressure and late-night escalation." },
+  { id: 18, name: "Eye glitch", category: "visitor", trigger: "Mirror visitor under low stability." },
+  { id: 19, name: "Reveal", category: "visitor", trigger: "Security call or exposed impostor." },
+  { id: 20, name: "Visitor leave", category: "visitor", trigger: "Allow or refusal result." },
+  { id: 21, name: "True resident hurt", category: "visitor", trigger: "Incorrectly block a real resident." },
+  { id: 22, name: "Duplicate overlay", category: "visitor", trigger: "Mirror and final-clerk cases." },
+  { id: 23, name: "Paper slide in", category: "document", trigger: "Open a collected document." },
+  { id: 24, name: "Document select pop", category: "document", trigger: "Select a document tab." },
+  { id: 25, name: "Paper hover lift", category: "document", trigger: "Hover an inspectable paper." },
+  { id: 26, name: "Document zoom open", category: "document", trigger: "Open archive or notice detail." },
+  { id: 27, name: "Document zoom close", category: "document", trigger: "Leave a document detail." },
+  { id: 28, name: "Archive page flip", category: "document", trigger: "Switch to resident archive." },
+  { id: 29, name: "Evidence stamp", category: "document", trigger: "Mark an evidence reason." },
+  { id: 30, name: "Evidence pin", category: "document", trigger: "Add evidence to the approval form." },
+  { id: 31, name: "File corruption flicker", category: "document", trigger: "Night five polluted archive." },
+  { id: 32, name: "Ledger entry pop", category: "document", trigger: "Open the nightly entry ledger." },
+  { id: 33, name: "Phone dial pulse", category: "tool", trigger: "Patch a switchboard line." },
+  { id: 34, name: "Phone connected", category: "tool", trigger: "Call returns a valid voice." },
+  { id: 35, name: "Phone dead air", category: "tool", trigger: "No answer or disconnected line." },
+  { id: 36, name: "Bad call distortion", category: "tool", trigger: "Duplicate voice or impossible background sound." },
+  { id: 37, name: "ID scanner beam", category: "tool", trigger: "Run an ID scan." },
+  { id: 38, name: "Scanner pass", category: "tool", trigger: "Clean scan result." },
+  { id: 39, name: "Scanner error", category: "tool", trigger: "Mismatch, corruption, or device failure." },
+  { id: 40, name: "CCTV boot static", category: "tool", trigger: "Open the CCTV terminal." },
+  { id: 41, name: "CCTV channel switch", category: "tool", trigger: "Change camera channel." },
+  { id: 42, name: "CCTV zoom freeze", category: "tool", trigger: "Anomaly frame is found." },
+  { id: 43, name: "Question card flip", category: "tool", trigger: "Ask an interview question." },
+  { id: 44, name: "Trap question hit", category: "tool", trigger: "A trap question exposes copied memory." },
+  { id: 45, name: "Allow unlock", category: "decision", trigger: "Stamp allow entry." },
+  { id: 46, name: "Refuse shutter", category: "decision", trigger: "Stamp refuse entry." },
+  { id: 47, name: "Security alarm", category: "decision", trigger: "Call security." },
+  { id: 48, name: "Hold time skip", category: "decision", trigger: "Place a visitor on hold." },
+  { id: 49, name: "Correct decision stamp", category: "decision", trigger: "Resolve a case correctly." },
+  { id: 50, name: "Wrong decision stinger", category: "decision", trigger: "Resolve a case incorrectly." },
+  { id: 51, name: "Reputation damage", category: "decision", trigger: "Block a legitimate entrant." },
+  { id: 52, name: "Safety damage", category: "decision", trigger: "Allow a registry error inside." },
+  { id: 53, name: "Night transition", category: "story", trigger: "Close nightly settlement." },
+  { id: 54, name: "Day prep open", category: "story", trigger: "Open the daytime preparation desk." },
+  { id: 55, name: "Registry rewrite", category: "story", trigger: "A copied record replaces a resident." },
+  { id: 56, name: "Ending title reveal", category: "story", trigger: "Resolve the final registry ending." },
 ];
 
 export const registryProps: RegistryPropAsset[] = [
