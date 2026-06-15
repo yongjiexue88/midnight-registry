@@ -271,7 +271,7 @@ function getHorrorFeedback(
 }
 
 function toExposureStage(value: number): ExposureStage {
-  return Math.max(0, Math.min(3, value)) as ExposureStage;
+  return Math.max(0, Math.min(4, value)) as ExposureStage;
 }
 
 function getExposureStage(
@@ -2513,12 +2513,12 @@ export function MidnightRegistryGame() {
                 <em>{exposureStageLabels[exposureStage]}</em>
               </header>
               <div className="registry-exposure-meter" aria-label={`伪装稳定度 ${exposureStageLabels[exposureStage]}`}>
-                <i style={{ width: `${100 - exposureStage * 28}%` }} />
+                <i style={{ width: `${Math.max(4, 100 - exposureStage * 24)}%` }} />
               </div>
               <ul>
                 {(monsterProfile?.observationTags ?? ["呼吸节奏自然", "手部结构正常", "声音与现场一致", "影子/倒影未见异常"]).map((tag, index) => (
-                  <li data-revealed={!monsterProfile || exposureStage >= Math.min(3, index)} key={tag}>
-                    <i className={`fa-solid ${!monsterProfile || exposureStage >= Math.min(3, index) ? "fa-square-check" : "fa-square"}`} />
+                  <li data-revealed={!monsterProfile || exposureStage >= Math.min(4, index)} key={tag}>
+                    <i className={`fa-solid ${!monsterProfile || exposureStage >= Math.min(4, index) ? "fa-square-check" : "fa-square"}`} />
                     <span>{tag}</span>
                   </li>
                 ))}

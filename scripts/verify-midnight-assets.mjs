@@ -52,14 +52,14 @@ const characterCount = verifyDirectory(
 const propCount = verifyDirectory("public/assets/midnight-registry/props", 512, 512, 39);
 const cctvCount = verifyDirectory("public/assets/midnight-registry/cctv", 512, 512, 8);
 const prepCount = verifyDirectory("public/assets/midnight-registry/prep", 512, 512, 10);
-const monsterCount = verifyDirectory("public/assets/midnight-registry/monsters", 512, 768, 24);
+const monsterCount = verifyDirectory("public/assets/midnight-registry/monsters", 512, 768, 30);
 
 const monsterSheet = pngDimensions(
   path.join(root, "public/assets/midnight-registry/monsters/monster-reveal-contact-sheet.png"),
 );
-if (monsterSheet.width !== 2048 || monsterSheet.height !== 4608) {
+if (monsterSheet.width !== 2560 || monsterSheet.height !== 4608) {
   throw new Error(
-    `Monster contact sheet must be 2048x4608, found ${monsterSheet.width}x${monsterSheet.height}`,
+    `Monster contact sheet must be 2560x4608, found ${monsterSheet.width}x${monsterSheet.height}`,
   );
 }
 

@@ -1,12 +1,14 @@
 import {
   registryAnimationAssets,
   registryAssetBase,
+  registryAudioAssets,
   registryCharacterAssets,
   registryCctvAssets,
   registryEndings,
   registryErrorDetails,
   registryMonsterAssets,
   registryNightPlans,
+  registryPrepAssets,
   registryProps,
   registrySheetAssets,
   registryStoryPillars,
@@ -16,6 +18,23 @@ import { playableVisitors } from "@/data/midnightRegistryData";
 
 const groupedProps = registryProps.reduce<Record<string, typeof registryProps>>((groups, prop) => {
   groups[prop.category] = [...(groups[prop.category] ?? []), prop];
+  return groups;
+}, {});
+
+function getAudioCategory(file: string) {
+  if (file.includes("phone")) return "Phone";
+  if (file.includes("cctv")) return "CCTV";
+  if (file.includes("scanner")) return "Scanner";
+  if (file.includes("stamp") || file.includes("decision") || file.includes("door") || file.includes("security") || file.includes("alarm")) return "Decisions";
+  if (file.includes("damage") || file.includes("sanity") || file.includes("safety") || file.includes("reputation")) return "Pressure";
+  if (file.includes("visitor") || file.includes("knock") || file.includes("breath") || file.includes("flesh") || file.includes("skin") || file.includes("bone") || file.includes("hollow") || file.includes("parasite") || file.includes("glass")) return "Visitor / horror";
+  if (file.includes("doc") || file.includes("archive") || file.includes("paper") || file.includes("evidence")) return "Documents";
+  return "Environment / system";
+}
+
+const groupedAudio = registryAudioAssets.reduce<Record<string, typeof registryAudioAssets>>((groups, asset) => {
+  const category = getAudioCategory(asset.file);
+  groups[category] = [...(groups[category] ?? []), asset];
   return groups;
 }, {});
 
@@ -67,6 +86,14 @@ export function MidnightRegistryDesignSystem() {
           <div>
             <dt>Story nights</dt>
             <dd>{registryNightPlans.length}</dd>
+          </div>
+          <div>
+            <dt>Prep materials</dt>
+            <dd>{registryPrepAssets.length}</dd>
+          </div>
+          <div>
+            <dt>Audio files</dt>
+            <dd>{registryAudioAssets.length}</dd>
           </div>
         </dl>
       </section>
@@ -146,20 +173,74 @@ export function MidnightRegistryDesignSystem() {
           {registryMonsterAssets.map((monster) => (
             <article key={monster.id}>
               <header>
-                <span>{monster.type}</span>
-                <h3>{monster.label}</h3>
-                <strong>{monster.handling.join(" / ")}</strong>
+                <div>
+                  <span>{monster.category}</span>
+                  <h3>{monster.label}</h3>
+                  <p>{monster.type} · {monster.nightRange}</p>
+                </div>
+                <strong data-threat={monster.threatLevel}>威胁等级 {monster.threatLevel}</strong>
               </header>
-              <div>
+              <section className="registry-monster-problem">
+                <span>核心核验问题</span>
+                <p>{monster.investigationProblem}</p>
+              </section>
+              <div className="registry-monster-timeline">
                 {monster.stageImages.map((image, index) => (
-                  <img key={image} src={image} alt={`${monster.label} stage ${index}`} />
+                  <figure key={image}>
+                    <img src={image} alt={`${monster.label} ${monster.stageLabels[index]}`} />
+                    <figcaption>
+                      <small>{String(index + 1).padStart(2, "0")}</small>
+                      <strong>{monster.stageLabels[index]}</strong>
+                    </figcaption>
+                  </figure>
                 ))}
               </div>
-              <ul>
-                {monster.revealNotes.map((note) => (
-                  <li key={note}>{note}</li>
-                ))}
-              </ul>
+              <div className="registry-monster-pattern">
+                <section>
+                  <h4>伪装与主谎言</h4>
+                  <p><strong>常见伪装：</strong>{monster.commonDisguise}</p>
+                  <p>{monster.mainLie}</p>
+                </section>
+                <section>
+                  <h4>证据通道</h4>
+                  <dl>
+                    {monster.evidenceChannels.map((evidence) => (
+                      <div key={evidence.channel}>
+                        <dt>{evidence.channel}</dt>
+                        <dd>{evidence.clue}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+                <section>
+                  <h4>暴露触发</h4>
+                  <p>{monster.revealTrigger}</p>
+                </section>
+                <section>
+                  <h4>暴露后行为</h4>
+                  <p>{monster.behaviorAfterExposed}</p>
+                </section>
+                <section className="is-correct">
+                  <h4>正确应对</h4>
+                  <p>{monster.correctResponse}</p>
+                </section>
+                <section className="is-failure">
+                  <h4>错误后果</h4>
+                  <p>{monster.wrongResponse}</p>
+                </section>
+              </div>
+              <section className="registry-monster-rules">
+                <h4>可学习规则</h4>
+                <ol>
+                  {monster.rules.map((rule) => (
+                    <li key={rule}>{rule}</li>
+                  ))}
+                </ol>
+              </section>
+              <footer>
+                <span>独特交互机制</span>
+                <strong>{monster.uniqueMechanic}</strong>
+              </footer>
             </article>
           ))}
         </div>
@@ -192,6 +273,25 @@ export function MidnightRegistryDesignSystem() {
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
           <span>06</span>
+          <h2>Day Preparation Desk Materials</h2>
+        </div>
+        <div className="registry-prep-asset-grid">
+          {registryPrepAssets.map((asset) => (
+            <article key={asset.id}>
+              <img src={asset.image} alt={`${asset.label} asset`} />
+              <div>
+                <h3>{asset.label}</h3>
+                <p>{asset.usage}</p>
+                <code>{asset.id}.png</code>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="registry-storybook__section">
+        <div className="registry-storybook__heading">
+          <span>07</span>
           <h2>CCTV Scene Materials</h2>
         </div>
         <div className="registry-cctv-asset-grid">
@@ -210,7 +310,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>07</span>
+          <span>08</span>
           <h2>Animation Event Library</h2>
         </div>
         <div className="registry-animation-grid">
@@ -227,7 +327,35 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>08</span>
+          <span>09</span>
+          <h2>Audio Effect Library</h2>
+        </div>
+        <div className="registry-audio-groups">
+          {Object.entries(groupedAudio).map(([category, assets]) => (
+            <article className="registry-audio-group" key={category}>
+              <h3>{category}</h3>
+              <div>
+                {assets.map((asset) => (
+                  <span key={asset.file}>
+                    <strong>{asset.file.replace(/[-_]/g, " ").replace(/\.wav$/, "")}</strong>
+                    <audio
+                      aria-label={`Play ${asset.file}`}
+                      controls
+                      preload="none"
+                      src={asset.src}
+                    />
+                    <code>{asset.file}</code>
+                  </span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="registry-storybook__section">
+        <div className="registry-storybook__heading">
+          <span>10</span>
           <h2>Reusable UI Components</h2>
         </div>
         <div className="registry-component-grid">
@@ -239,7 +367,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>09</span>
+          <span>11</span>
           <h2>Error Detail Rules</h2>
         </div>
         <div className="registry-error-grid">
@@ -267,7 +395,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>10</span>
+          <span>12</span>
           <h2>Seven-Night Encounter Flow</h2>
         </div>
         <div className="registry-night-grid">
@@ -302,7 +430,7 @@ export function MidnightRegistryDesignSystem() {
 
       <section className="registry-storybook__section">
         <div className="registry-storybook__heading">
-          <span>11</span>
+          <span>13</span>
           <h2>Endings</h2>
         </div>
         <div className="registry-ending-grid">

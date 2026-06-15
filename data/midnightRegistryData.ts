@@ -19,7 +19,7 @@ export type MonsterType =
   | "hollow_echo"
   | "adaptive_collector"
   | "frontdesk_replacement";
-export type ExposureStage = 0 | 1 | 2 | 3;
+export type ExposureStage = 0 | 1 | 2 | 3 | 4;
 export type ContainmentAction =
   | "lockdown"
   | "uv_light"
@@ -35,7 +35,7 @@ export type MonsterProfile = {
   observationTags: string[];
   correctContainment: ContainmentAction[];
   wrongContainmentEffect: string;
-  exposeCopy: [string, string, string, string];
+  exposeCopy: [string, string, string, string, string];
   treatmentHint: string;
   requiresContainment?: boolean;
 };
@@ -306,10 +306,11 @@ export const monsterTypeLabels: Record<MonsterType, string> = {
 };
 
 export const exposureStageLabels: Record<ExposureStage, string> = {
-  0: "稳定",
-  1: "波动",
-  2: "崩解",
-  3: "暴露",
+  0: "伪装",
+  1: "微小错误",
+  2: "证据确认",
+  3: "形态崩解",
+  4: "主动威胁",
 };
 
 export const containmentActionLabels: Record<ContainmentAction, string> = {
@@ -336,44 +337,21 @@ export const containmentActions: {
 ];
 
 const monsterBase = "/assets/midnight-registry/monsters";
+const monsterStageSequence = ["disguise", "micro_error", "confirmed", "reveal", "threat"] as const;
+
+function makeMonsterStageImages(monster: Exclude<MonsterType, "none">): Record<ExposureStage, string> {
+  return Object.fromEntries(
+    monsterStageSequence.map((stage, index) => [index, `${monsterBase}/${monster}_${stage}.png`]),
+  ) as Record<ExposureStage, string>;
+}
 
 export const monsterStageImages: Record<Exclude<MonsterType, "none">, Record<ExposureStage, string>> = {
-  failed_mimic: {
-    0: `${monsterBase}/failed_mimic_normal.png`,
-    1: `${monsterBase}/failed_mimic_reveal_1.png`,
-    2: `${monsterBase}/failed_mimic_reveal_2.png`,
-    3: `${monsterBase}/failed_mimic_exposed.png`,
-  },
-  parasite_bloom: {
-    0: `${monsterBase}/parasite_bloom_normal.png`,
-    1: `${monsterBase}/parasite_bloom_reveal_1.png`,
-    2: `${monsterBase}/parasite_bloom_reveal_2.png`,
-    3: `${monsterBase}/parasite_bloom_exposed.png`,
-  },
-  structure_breaker: {
-    0: `${monsterBase}/structure_breaker_normal.png`,
-    1: `${monsterBase}/structure_breaker_reveal_1.png`,
-    2: `${monsterBase}/structure_breaker_reveal_2.png`,
-    3: `${monsterBase}/structure_breaker_exposed.png`,
-  },
-  hollow_echo: {
-    0: `${monsterBase}/hollow_echo_normal.png`,
-    1: `${monsterBase}/hollow_echo_reveal_1.png`,
-    2: `${monsterBase}/hollow_echo_reveal_2.png`,
-    3: `${monsterBase}/hollow_echo_exposed.png`,
-  },
-  adaptive_collector: {
-    0: `${monsterBase}/adaptive_collector_normal.png`,
-    1: `${monsterBase}/adaptive_collector_reveal_1.png`,
-    2: `${monsterBase}/adaptive_collector_reveal_2.png`,
-    3: `${monsterBase}/adaptive_collector_exposed.png`,
-  },
-  frontdesk_replacement: {
-    0: `${monsterBase}/frontdesk_replacement_normal.png`,
-    1: `${monsterBase}/frontdesk_replacement_reveal_1.png`,
-    2: `${monsterBase}/frontdesk_replacement_reveal_2.png`,
-    3: `${monsterBase}/frontdesk_replacement_exposed.png`,
-  },
+  failed_mimic: makeMonsterStageImages("failed_mimic"),
+  parasite_bloom: makeMonsterStageImages("parasite_bloom"),
+  structure_breaker: makeMonsterStageImages("structure_breaker"),
+  hollow_echo: makeMonsterStageImages("hollow_echo"),
+  adaptive_collector: makeMonsterStageImages("adaptive_collector"),
+  frontdesk_replacement: makeMonsterStageImages("frontdesk_replacement"),
 };
 
 export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfile> = {
@@ -381,7 +359,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
     type: "failed_mimic",
     startExposure: 0,
     revealTriggers: ["compare:id", "evidence:id", "tool:question", "save:question"],
-    observationTags: ["笑容停留太久", "眨眼太少", "私人习惯卡壳", "面皮慢半拍复位"],
+    observationTags: ["笑容停留太久", "一只眼睛慢半拍眨动", "私人习惯卡壳", "倒影出现第二层面孔", "未完成的人脸顶开外层面具"],
     correctContainment: ["lockdown"],
     wrongContainmentEffect: "放行后会占用低风险住户身份，真实住户的私人习惯先从档案中消失。",
     exposeCopy: [
@@ -389,6 +367,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
       "被指出破绽后，嘴角抽动，像面具重新贴回脸上。",
       "面皮边缘松开，下面露出第二张未完成的人脸。",
       "手指重新排列，横向拉开的嘴仍在背诵档案里的句子。",
+      "第二张脸完全顶开伪装，用多个住户的声音同时请求登记。",
     ],
     treatmentHint: "保存纸面或私人习惯矛盾后，拒绝或封锁入口即可阻断登记。",
   },
@@ -396,7 +375,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
     type: "parasite_bloom",
     startExposure: 0,
     revealTriggers: ["tool:scanner", "save:scanner", "cctv:front", "wait:cctv", "containment:cleanse"],
-    observationTags: ["颈部轻微鼓动", "衣领下有湿痕", "胸口第二呼吸源", "黑色纤维从咳声里抖出"],
+    observationTags: ["颈部轻微鼓动", "衣领下有孢子湿痕", "胸口第二热源", "寄生花从胸腔展开", "宿主与寄生体同时呼吸"],
     correctContainment: ["lockdown", "cleanse"],
     wrongContainmentEffect: "大厅污染值上升，档案纸面会出现湿墨和孢子状斑点。",
     exposeCopy: [
@@ -404,6 +383,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
       "扫描光扫过胸口时，热区像第二个肺在开合。",
       "颈后皮肤裂出细小开口，衣领边缘沾着黑色纤维。",
       "胸腔像花一样打开，声音从喉咙以外的地方共振。",
+      "寄生花完全展开，宿主仍在求救，内部生命却开始向大厅释放孢子。",
     ],
     treatmentHint: "先封锁入口，再用净化喷雾或安保处理，避免污染进入大厅。",
     requiresContainment: true,
@@ -412,7 +392,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
     type: "structure_breaker",
     startExposure: 0,
     revealTriggers: ["compare:appearance", "evidence:appearance", "cctv:shadow", "cctv:front", "containment:iron_gate"],
-    observationTags: ["手臂比例过长", "肩膀高低不一", "敲门动作像反折关节", "侧面监控暴露反向膝盖"],
+    observationTags: ["手臂比例过长", "颈部角度无法成立", "侧影高于本体", "膝盖与手指反向弯曲", "四肢完全展开跨越警戒线"],
     correctContainment: ["lockdown", "iron_gate"],
     wrongContainmentEffect: "门锁稳定度下降，后续案件更容易触发门禁故障。",
     exposeCopy: [
@@ -420,6 +400,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
       "它把错误的手藏到身后，肩膀却高低错开。",
       "走廊侧面拍到反折的膝盖和过长前臂。",
       "四肢反向展开，手掌裂成抓握玻璃的器官。",
+      "它放弃人类高度，长肢沿玻璃边缘展开，影子却保持另一种姿势。",
     ],
     treatmentHint: "CCTV 或外貌证据命中后，封锁入口或拉下铁门最可靠。",
   },
@@ -427,7 +408,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
     type: "hollow_echo",
     startExposure: 0,
     revealTriggers: ["tool:phone", "save:phone", "cctv:shadow", "containment:broadcast", "containment:uv_light"],
-    observationTags: ["声音与电话同步", "挂断后仍复述尾音", "眼睛反光缺失", "嘴里没有喉咙"],
+    observationTags: ["口型慢于声音", "眼睛反光缺失", "电话与身体同时发声", "嘴里没有喉咙", "胸腔变成持续广播的空洞"],
     correctContainment: ["uv_light", "broadcast"],
     wrongContainmentEffect: "电话线路出现回声，住户照片会短暂变成空白。",
     exposeCopy: [
@@ -435,6 +416,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
       "电话与门外同一句话重叠，门外的人停止眨眼。",
       "强光下脸部边缘缺失，嘴里只剩黑色空洞。",
       "身体内部像空壳，回声仍在替它回答问题。",
+      "脸与胸口贯通成同一个广播腔体，所有线路开始重复它的声音。",
     ],
     treatmentHint: "用电话冲突、强光或广播干扰逼出空壳，再呼叫安保。",
   },
@@ -442,7 +424,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
     type: "adaptive_collector",
     startExposure: 0,
     revealTriggers: ["tool:question", "save:question", "wait:reaction", "evidence:behavior", "containment:lockdown"],
-    observationTags: ["回答过度完美", "多个住户习惯拼在一起", "停顿时长像被复制", "脸部快速切换表情"],
+    observationTags: ["回答过度完美", "多个住户习惯重叠", "停顿时长完全一致", "脸部切换不同住户表情", "记忆与肢体形成集群"],
     correctContainment: ["lockdown", "broadcast"],
     wrongContainmentEffect: "它会学习本局最常用工具，使后续扫描或电话更容易伪通过。",
     exposeCopy: [
@@ -450,6 +432,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
       "它同时说出几个住户的私人习惯，顺序却像数据库拼接。",
       "一只手戴周启明的手套，肩上却有林安娜舞蹈包带痕。",
       "脸在几名住户之间快速切换，嘴里重复你曾接受过的答案。",
+      "多张脸、手势和住户物件围绕同一身体循环，像一整栋楼的记忆正在争夺出口。",
     ],
     treatmentHint: "留置诱导并保存多条行为矛盾，再封锁或广播干扰。",
   },
@@ -457,7 +440,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
     type: "frontdesk_replacement",
     startExposure: 0,
     revealTriggers: ["cctv:clerk", "evidence:ledger", "containment:registry_rewrite", "containment:uv_light"],
-    observationTags: ["完整工牌", "000 室无效", "当前前台 CCTV 仍拍到你", "影子比人慢半秒"],
+    observationTags: ["工牌印章年份错误", "000 室无效", "前台 CCTV 仍拍到当前门岗", "皮肤变成可改写文件", "胸腔展开为替换协议"],
     correctContainment: ["lockdown", "registry_rewrite"],
     wrongContainmentEffect: "第二份薛夜记录会覆盖当前门岗，真正的你被留在雨中。",
     exposeCopy: [
@@ -465,6 +448,7 @@ export const monsterProfiles: Record<Exclude<MonsterType, "none">, MonsterProfil
       "前台 CCTV 拍到你仍在岗，它的影子却慢半拍才跟上。",
       "胸口皮肤像登记簿纸页一样开合，浮出你盖过的印章。",
       "它仍用你的脸说话，但身体内部只剩空壳和拼接组织。",
+      "整张脸被删改线覆盖，胸腔里的文件开始把当前薛夜标记为门外冒名者。",
     ],
     treatmentHint: "保存前台自身 CCTV，反写登记簿，再封锁并呼叫安保。",
     requiresContainment: true,

@@ -19,6 +19,13 @@ export type RegistrySheetAsset = {
   reviewNotes: string[];
 };
 
+export type RegistryPrepAsset = {
+  id: string;
+  label: string;
+  image: string;
+  usage: string;
+};
+
 export type RegistryPropAsset = {
   id: string;
   label: string;
@@ -37,9 +44,21 @@ export type RegistryMonsterAsset = {
   id: string;
   label: string;
   type: string;
+  category: string;
+  threatLevel: number;
+  nightRange: string;
+  commonDisguise: string;
+  investigationProblem: string;
+  mainLie: string;
+  evidenceChannels: { channel: string; clue: string }[];
+  revealTrigger: string;
+  stageLabels: string[];
   stageImages: string[];
-  handling: string[];
-  revealNotes: string[];
+  behaviorAfterExposed: string;
+  correctResponse: string;
+  wrongResponse: string;
+  rules: string[];
+  uniqueMechanic: string;
 };
 
 export type RegistryAnimationAsset = {
@@ -291,8 +310,71 @@ export const registrySheetAssets: RegistrySheetAsset[] = [
     id: "monster-reveal",
     title: "Monster reveal stage contact sheet",
     image: `${registryAssetBase}/monsters/monster-reveal-contact-sheet.png`,
-    usage: "Review sheet for six Borrower monster templates across normal, reveal 1, reveal 2, and exposed stages.",
-    reviewNotes: ["Contact sheet is review-only; gameplay uses clean individual 512 x 768 PNG exports.", "No filename strips, neighboring art, or card borders are present in individual stage files.", "Templates map directly to the exposure meter and containment actions."],
+    usage: "Review sheet for six monster case patterns across disguise, micro error, confirmed evidence, broken form, and active threat stages.",
+    reviewNotes: ["Contact sheet is review-only; gameplay uses 30 clean individual 512 x 768 PNG exports.", "No filename strips, neighboring art, or card borders are present in individual stage files.", "Every row now maps a distinct investigation mechanic to a five-stage exposure timeline."],
+  },
+];
+
+export const registryPrepAssets: RegistryPrepAsset[] = [
+  {
+    id: "story-contract",
+    label: "七夜故事合同",
+    image: `${registryAssetBase}/prep/story-contract.png`,
+    usage: "完整七夜剧情、白日修复、设备升级与多结局模式合同。",
+  },
+  {
+    id: "blackout-contract",
+    label: "停电挑战合同",
+    image: `${registryAssetBase}/prep/blackout-contract.png`,
+    usage: "资源更少、设备故障更频繁的挑战模式合同。",
+  },
+  {
+    id: "endless-contract",
+    label: "无尽值班合同",
+    image: `${registryAssetBase}/prep/endless-contract.png`,
+    usage: "每轮八案并持续提高威胁与队列压力的无尽模式合同。",
+  },
+  {
+    id: "tutorial-handbook",
+    label: "值班手册",
+    image: `${registryAssetBase}/prep/tutorial-handbook.png`,
+    usage: "第一夜教学顺序、分层提示与规则查阅素材。",
+  },
+  {
+    id: "sanity-coffee",
+    label: "稳定咖啡",
+    image: `${registryAssetBase}/prep/sanity-coffee.png`,
+    usage: "换班后恢复稳定度的支援道具。",
+  },
+  {
+    id: "scanner-booster",
+    label: "扫描增幅器",
+    image: `${registryAssetBase}/prep/scanner-booster.png`,
+    usage: "防止扫描器故障并增加扫描次数的支援道具。",
+  },
+  {
+    id: "manual-lock-override",
+    label: "门锁手动旁路",
+    image: `${registryAssetBase}/prep/manual-lock-override.png`,
+    usage: "防止门锁卡死的机械旁路工具。",
+  },
+  {
+    id: "switchboard-kit",
+    label: "交换机接线盒",
+    image: `${registryAssetBase}/prep/switchboard-kit.png`,
+    usage: "防止电话线路中断并增加通话次数的维修工具。",
+  },
+  {
+    id: "shift-bell",
+    label: "值班铃",
+    image: `${registryAssetBase}/prep/shift-bell.png`,
+    usage: "开始夜班、推进桌面仪式和触发换班反馈的前台道具。",
+  },
+  {
+    id: "master-switch",
+    label: "门禁总开关",
+    image: `${registryAssetBase}/prep/master-switch.png`,
+    usage: "开始值班并控制公寓门禁状态的主开关素材。",
   },
 ];
 
@@ -352,49 +434,151 @@ export const registryMonsterAssets: RegistryMonsterAsset[] = [
     id: "failed_mimic",
     label: "Failed Mimic",
     type: "模仿失败型",
-    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/failed_mimic_${stage}.png`),
-    handling: ["拒绝进入", "封锁入口"],
-    revealNotes: ["Smile lingers too long.", "Private habit answer stalls.", "Face splits into a second unfinished mask."],
+    category: "Broken Copy / 破损复制体",
+    threatLevel: 1,
+    nightRange: "第 1-3 夜",
+    commonDisguise: "晚归住户、快递员、普通访客",
+    investigationProblem: "证件与基础身份几乎正确，但它无法自然复制情绪、习惯和私人关系。",
+    mainLie: "“我就是档案里写的那个人，所以你不需要再问生活细节。”",
+    evidenceChannels: [
+      { channel: "外貌", clue: "笑容停留过久，一只眼睛慢半拍眨动。" },
+      { channel: "提问", clue: "私人习惯问题出现固定延迟，回答像复述档案。" },
+      { channel: "电话", clue: "真正住户的房间线路在楼内响起。" },
+      { channel: "CCTV", clue: "倒影里有第二层未完成的人脸。" },
+    ],
+    revealTrigger: "保存两条私人习惯矛盾，或在指出身份冲突后拒绝进入。",
+    stageLabels: ["伪装", "微小错误", "证据确认", "面具崩解", "主动威胁"],
+    stageImages: ["disguise", "micro_error", "confirmed", "reveal", "threat"].map((stage) => `${registryAssetBase}/monsters/failed_mimic_${stage}.png`),
+    behaviorAfterExposed: "改用已复制的住户声音轮流求情，并把脸重新贴回去。",
+    correctResponse: "私人习惯提问 + 保存矛盾证据，再拒绝进入；证据升级时可呼叫安保。",
+    wrongResponse: "放行后，次夜一名住户的私人习惯会先从档案中消失，随后身份被替换。",
+    rules: ["可以复制姓名、房号和证件。", "无法稳定复制情绪与未记录习惯。", "私人问题前会出现可重复的停顿。", "连续拒绝会让面具失去稳定。"],
+    uniqueMechanic: "使用私人习惯问题击穿纸面身份。",
   },
   {
     id: "parasite_bloom",
     label: "Parasite Bloom",
     type: "寄生增殖型",
-    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/parasite_bloom_${stage}.png`),
-    handling: ["封锁入口", "净化喷雾", "呼叫安保"],
-    revealNotes: ["Second heat source behind sternum.", "Neck aperture opens under collar.", "Chest blooms into a resonating spore cavity."],
+    category: "Infected Host / 感染宿主",
+    threatLevel: 3,
+    nightRange: "第 2-5 夜",
+    commonDisguise: "真实住户、维修工、医疗访客",
+    investigationProblem: "宿主可能是真人，证件和记忆都正确，但身体内部存在第二个危险生命。",
+    mainLie: "“身份是真的，就应该允许我进楼。”",
+    evidenceChannels: [
+      { channel: "扫描", clue: "胸骨后方出现第二热源和独立呼吸节奏。" },
+      { channel: "音频", clue: "咳声里混入另一组湿润共振。" },
+      { channel: "外貌", clue: "衣领下有孢子，颈部接缝正在开合。" },
+      { channel: "规则", clue: "感染者必须留置隔离，不能只按真假身份裁决。" },
+    ],
+    revealTrigger: "热扫描校准成功，或留置期间观察到胸口与宿主不同步呼吸。",
+    stageLabels: ["真实宿主", "胸口脉冲", "热源确认", "寄生开花", "主动扩散"],
+    stageImages: ["disguise", "micro_error", "confirmed", "reveal", "threat"].map((stage) => `${registryAssetBase}/monsters/parasite_bloom_${stage}.png`),
+    behaviorAfterExposed: "宿主仍会求救，但胸腔中的寄生体开始替其回答并释放孢子。",
+    correctResponse: "先留置或封锁入口，再执行净化并呼叫医疗安保。",
+    wrongResponse: "单纯拒绝会让宿主在门外扩散；直接放行则使大厅污染并改写档案纸面。",
+    rules: ["宿主可能完全真实。", "文件与电话确认不能排除感染。", "第二热源和独立呼吸是核心证据。", "必须隔离处理，不能只做真假裁决。"],
+    uniqueMechanic: "热扫描确认感染，并使用留置隔离分支。",
   },
   {
     id: "structure_breaker",
     label: "Structure Breaker",
     type: "骨架错构型",
-    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/structure_breaker_${stage}.png`),
-    handling: ["拉下铁门", "封锁入口"],
-    revealNotes: ["Wrong-hand clue.", "Side CCTV reveals long arms.", "Limbs reverse against the glass."],
+    category: "Impossible Body / 不可能身体",
+    threatLevel: 3,
+    nightRange: "第 2-6 夜",
+    commonDisguise: "维修工、住户、夜班工作人员",
+    investigationProblem: "对话与文件都能成立，只有侧面角度、动作和影子暴露它不遵守人体结构。",
+    mainLie: "“正面看起来像人，就足以证明身体正常。”",
+    evidenceChannels: [
+      { channel: "CCTV", clue: "侧面镜头显示前臂过长、膝盖反折。" },
+      { channel: "外貌", clue: "颈部角度与肩线无法同时成立。" },
+      { channel: "影子", clue: "影子的高度、手势和关节方向与本体不同。" },
+      { channel: "玻璃", clue: "手指贴窗时从错误方向弯曲。" },
+    ],
+    revealTrigger: "切换到侧面 CCTV 并冻结异常关节，或进行外貌对照。",
+    stageLabels: ["正面伪装", "比例错误", "侧影证据", "骨架反折", "完全展开"],
+    stageImages: ["disguise", "micro_error", "confirmed", "reveal", "threat"].map((stage) => `${registryAssetBase}/monsters/structure_breaker_${stage}.png`),
+    behaviorAfterExposed: "停止维持人类站姿，展开长肢并尝试跨过警戒线。",
+    correctResponse: "保存侧面 CCTV 证据，封锁入口并拉下铁门。",
+    wrongResponse: "门锁会被反折肢体破坏，后续案件更容易触发门禁故障。",
+    rules: ["正面视角最容易隐藏错误。", "文件和对话通常没有破绽。", "侧影与关节方向无法同时伪造。", "暴露后必须使用物理阻断。"],
+    uniqueMechanic: "比较正面窗口与侧面 CCTV 的身体物理。",
   },
   {
     id: "hollow_echo",
     label: "Hollow Echo",
     type: "空壳回声型",
-    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/hollow_echo_${stage}.png`),
-    handling: ["强光照射", "广播干扰", "呼叫安保"],
-    revealNotes: ["Phone and door speak together.", "Eyes do not catch light.", "Mouth opens into a hollow receiver."],
+    category: "Voice Entity / 声音实体",
+    threatLevel: 4,
+    nightRange: "第 3-6 夜",
+    commonDisguise: "沉默住户、访客、电话确认对象",
+    investigationProblem: "外观和文件稳定，但声音可以从电话、对讲和身体同时出现并提前回答。",
+    mainLie: "“你听见的每个声音都来自门外这一个人。”",
+    evidenceChannels: [
+      { channel: "电话", clue: "听筒与门外在同一时刻说出相同句子。" },
+      { channel: "音频", clue: "波形先出现，嘴唇随后才移动。" },
+      { channel: "强光", clue: "眼睛不反光，脸后没有正常组织。" },
+      { channel: "提问", clue: "重复问题会产生不同的声音延迟。" },
+    ],
+    revealTrigger: "拨打房间线路并保存同步声音，或在沉默观察中捕捉提前波形。",
+    stageLabels: ["安静伪装", "口型延迟", "波形确认", "空壳开口", "广播实体"],
+    stageImages: ["disguise", "micro_error", "confirmed", "reveal", "threat"].map((stage) => `${registryAssetBase}/monsters/hollow_echo_${stage}.png`),
+    behaviorAfterExposed: "用电话、广播和门外身体同时说话，试图让玩家无法判断声源。",
+    correctResponse: "保存电话冲突，使用强光或广播干扰，再呼叫安保。",
+    wrongResponse: "电话系统会被回声占据，住户照片和声音记录短暂变为空白。",
+    rules: ["声音可以早于身体动作。", "它会主动填补沉默。", "眼睛与口腔不遵守光线规则。", "重复提问会暴露不同延迟。"],
+    uniqueMechanic: "检测电话与身体之间的音频延迟和声源冲突。",
   },
   {
     id: "adaptive_collector",
     label: "Adaptive Collector",
     type: "拼接学习型",
-    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/adaptive_collector_${stage}.png`),
-    handling: ["留置诱导", "广播干扰", "封锁入口"],
-    revealNotes: ["Answers are too perfect.", "Multiple residents' habits combine.", "Face cycles through copied expressions."],
+    category: "Memory Thief / 记忆窃取者",
+    threatLevel: 4,
+    nightRange: "第 4-7 夜",
+    commonDisguise: "完美住户、档案员、长期访客",
+    investigationProblem: "它知道得过多，能回答私人问题，却会把多个住户的记忆、动作和关系拼到一个身份上。",
+    mainLie: "“回答全部正确就代表我是唯一正确的人。”",
+    evidenceChannels: [
+      { channel: "提问", clue: "答案过度完美，停顿时长完全一致。" },
+      { channel: "档案", clue: "同一句回答同时属于多个住户。" },
+      { channel: "行为", clue: "手势、称呼和习惯来自不同身份。" },
+      { channel: "留置", clue: "等待后表情与动作开始循环切换。" },
+    ],
+    revealTrigger: "交叉比较三名住户的习惯，或在留置中提出互相矛盾的私人问题。",
+    stageLabels: ["完美伪装", "习惯重叠", "多重记忆", "身份拼接", "记忆集群"],
+    stageImages: ["disguise", "micro_error", "confirmed", "reveal", "threat"].map((stage) => `${registryAssetBase}/monsters/adaptive_collector_${stage}.png`),
+    behaviorAfterExposed: "快速切换住户表情与声音，并使用玩家过去接受过的答案反向说服。",
+    correctResponse: "留置诱导，保存跨住户矛盾，再封锁入口或使用广播干扰。",
+    wrongResponse: "它会学习本局最常用的工具和问题，使后续扫描、电话或私人提问更容易伪通过。",
+    rules: ["基础问题和私人问题都可能答对。", "多个身份的习惯不能同时属于一人。", "过度完美的回答时间本身就是异常。", "必须轮换问题和证据来源。"],
+    uniqueMechanic: "跨多个住户档案寻找不可能同时成立的记忆。",
   },
   {
     id: "frontdesk_replacement",
     label: "Frontdesk Replacement",
     type: "前台替换型",
-    stageImages: ["normal", "reveal_1", "reveal_2", "exposed"].map((stage) => `${registryAssetBase}/monsters/frontdesk_replacement_${stage}.png`),
-    handling: ["前台 CCTV 自证", "登记簿反写", "封锁入口", "呼叫安保"],
-    revealNotes: ["Badge and paperwork are almost correct.", "000 room is invalid.", "Chest opens like registry paper covered in old stamps."],
+    category: "System Impostor / 系统冒名者",
+    threatLevel: 5,
+    nightRange: "第 7 夜",
+    commonDisguise: "换班门岗、管理处人员、登记簿授权者",
+    investigationProblem: "它不只复制住户，而是伪造玩家的职位、权限和整套登记系统。",
+    mainLie: "“你已经批准了我；现在轮到我接管这张桌子。”",
+    evidenceChannels: [
+      { channel: "登记簿", clue: "出现第二份在岗记录和无效的 000 室。" },
+      { channel: "CCTV", clue: "当前前台仍拍到玩家本人，门外复制体没有对应倒影。" },
+      { channel: "文件", clue: "旧印章年份、背面警告和换班通知互相冲突。" },
+      { channel: "系统", clue: "来客发言时 UI 和档案开始自行改写。" },
+    ],
+    revealTrigger: "完成前台 CCTV 自证、识别 000 室无效，并执行登记簿审计。",
+    stageLabels: ["换班伪装", "印章错误", "系统改写", "文件肉身", "接管协议"],
+    stageImages: ["disguise", "micro_error", "confirmed", "reveal", "threat"].map((stage) => `${registryAssetBase}/monsters/frontdesk_replacement_${stage}.png`),
+    behaviorAfterExposed: "改写界面与登记簿，声称玩家已经完成交接，并尝试把当前门岗标记为替换对象。",
+    correctResponse: "保存前台自身 CCTV，识别无效记录，登记簿反写后封锁入口并呼叫安保。",
+    wrongResponse: "第二份薛夜记录覆盖当前门岗，真正的玩家被系统认定为门外冒名者。",
+    rules: ["官方文件也可能被系统污染。", "000 室与今夜换班都不存在。", "当前在岗记录只能有一份。", "必须先自证，再反写系统。"],
+    uniqueMechanic: "审计正在变化的登记系统并保护玩家自己的身份记录。",
   },
 ];
 
@@ -691,3 +875,77 @@ export const registryEndings = [
   { id: "bad", label: "Bad ending", trigger: "Allow the replacement clerk; the next morning the real Y. Xue is outside the glass asking to be let back in." },
   { id: "hidden", label: "Hidden ending", trigger: "Collect enough evidence to erase the duplicate record, destroying the registry's route in while removing yourself from the building record." },
 ];
+
+export const registryAudioAssets = [
+  "alarm.wav",
+  "archive_glitch.wav",
+  "bell.wav",
+  "bone_shift.wav",
+  "cctv-freeze.wav",
+  "cctv_freeze.wav",
+  "cctv_glitch.wav",
+  "cctv_snapshot.wav",
+  "cctv_switch.wav",
+  "containment_lock.wav",
+  "correct_decision.wav",
+  "damage-reputation.wav",
+  "damage-safety.wav",
+  "damage-sanity.wav",
+  "doc_flip.wav",
+  "doc_open.wav",
+  "door_lock.wav",
+  "door_unlock.wav",
+  "duplicate_whisper.wav",
+  "evidence_save.wav",
+  "flesh_twitch.wav",
+  "glass_impact_soft.wav",
+  "glass_touch.wav",
+  "hollow_voice.wav",
+  "knock.wav",
+  "mirror_glitch.wav",
+  "no_shadow.wav",
+  "office_hum_loop.wav",
+  "paper_ink_move.wav",
+  "parasite_pulse.wav",
+  "phone-connected.wav",
+  "phone-dead-air.wav",
+  "phone-dial.wav",
+  "phone-ring.wav",
+  "phone_connect.wav",
+  "phone_dead.wav",
+  "phone_dial.wav",
+  "phone_duplicate_voice.wav",
+  "phone_pickup.wav",
+  "phone_ring.wav",
+  "rain-loop.wav",
+  "rain_loop.wav",
+  "reputation_damage.wav",
+  "safety_damage.wav",
+  "sanity_damage.wav",
+  "scanner-error.wav",
+  "scanner-pass.wav",
+  "scanner_fail.wav",
+  "scanner_fake_pass.wav",
+  "scanner_pass.wav",
+  "scanner_start.wav",
+  "security_alarm.wav",
+  "shift_bell.wav",
+  "skin_crack.wav",
+  "spray_cleanse.wav",
+  "stamp.wav",
+  "stamp_allow.wav",
+  "stamp_reject.wav",
+  "stamp_security.wav",
+  "stamp_wait.wav",
+  "ui_click.wav",
+  "uv_light_on.wav",
+  "visitor_breath.wav",
+  "visitor_knock_normal.wav",
+  "visitor_knock_wrong.wav",
+  "visitor_leave.wav",
+  "wet_breath.wav",
+  "wrong_decision.wav",
+].map((file) => ({
+  file,
+  src: `${registryAssetBase}/audio/${file}`,
+}));
